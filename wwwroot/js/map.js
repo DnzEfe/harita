@@ -122,7 +122,7 @@
     });
 
 
-    // --- SAĞ TIK KONTROLÜ VE ANKARA NOKTASI ---
+    // --- SAĞ TIK KONTROLÜ VE ANKARA NOKTASI --
     view2D.on("pointer-down", function (event) { if (event.button === 2) measure2D.viewModel.clear(); });
     view3D.on("pointer-down", function (event) { if (event.button === 2) measure3D.viewModel.clear(); });
 
