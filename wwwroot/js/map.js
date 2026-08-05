@@ -5,8 +5,9 @@
     "esri/layers/GraphicsLayer",
     "esri/widgets/Fullscreen",
     "esri/widgets/BasemapGallery",
-    "esri/widgets/Expand"
-], function (Map, MapView, Graphic, GraphicsLayer, Fullscreen, BasemapGallery, Expand) {
+    "esri/widgets/Expand",
+    "esri/widgets/Search" // 1. Arama modülü eklendi
+], function (Map, MapView, Graphic, GraphicsLayer, Fullscreen, BasemapGallery, Expand, Search) {
 
     const map = new Map({
         basemap: "satellite"
@@ -47,43 +48,38 @@
     graphicsLayer.add(pointGraphic);
 
     // =========================================================
-    // SOL ÜST KÖŞEYE (ZOOM ALTINA) EKLENEN BUTONLAR
+    // SOL ÜST KÖŞE: TAM EKRAN VE ALTLIK GALERİSİ
     // =========================================================
 
-    // 1. TAM EKRAN (FULLSCREEN) BUTONU
+    // Tam Ekran Butonu
     const fullscreen = new Fullscreen({
         view: view
     });
-    // Zoom butonlarının hemen altına yerleşir
     view.ui.add(fullscreen, "top-left");
 
-    // 2. ALTLIK HARİTA GALERİSİ (BASEMAP GALLERY) BUTONU
+    // Altlık Harita Galerisi
     const basemapGallery = new BasemapGallery({
         view: view
     });
 
-    // Harita galeri kutusunu küçük bir buton simgesine dönüştürür
     const bgExpand = new Expand({
         view: view,
         content: basemapGallery,
         expandIconClass: "esri-icon-basemap",
         expandTooltip: "Harita Türünü Değiştir"
     });
-    // Tam ekran butonunun hemen altına yerleşir
     view.ui.add(bgExpand, "top-left");
 
-});
-// Tam ekran değişimlerini dinle ve ekrandan çıkınca haritayı yeniden boyutlandır
-document.addEventListener("fullscreenchange", function () {
-    if (!document.fullscreenElement) {
-        // Tam ekrandan çıkıldığında çalışır
-        setTimeout(function () {
-            if (view && view.container) {
-                // Çizim alanını yeniden hesaplatmak için dikey boyutu tazele
-                view.container.style.display = "none";
-                view.container.offsetHeight; // Force reflow (yeniden çizim tetikle)
-                view.container.style.display = "block";
-            }
-        }, 100);
-    }
+    // =========================================================
+    // SAĞ ÜST KÖŞE: ARAMA ÇUBUĞU (SEARCH)
+    // =========================================================
+
+    // 2. Arama bileşeni oluşturuldu
+    const searchWidget = new Search({
+        view: view
+    });
+
+    // Arama kutusu haritanın sağ üst alanına yerleştirildi
+    view.ui.add(searchWidget, "top-right");
+
 });
