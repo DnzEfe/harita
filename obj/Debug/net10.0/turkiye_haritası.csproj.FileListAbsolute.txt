@@ -97,5 +97,5 @@ C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\turkiye_haritası.genruntimeconfig.cache
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\ref\turkiye_haritası.dll
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\turkiye_haritası.sourcelink.json
-C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\compressed\kusa13wj5p-{0}-a1t80dbxpy-a1t80dbxpy.gz
-C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-zawlnc43q3-zawlnc43q3.gz
+C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\compressed\kusa13wj5p-{0}-zlas7gnpu8-zlas7gnpu8.gz
+C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-mzbjiuqb56-mzbjiuqb56.gz

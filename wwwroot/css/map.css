@@ -1,11 +1,8 @@
-﻿ <style>
- html, body{
+﻿/* html ve body'nin yanına #viewDiv'i de ekliyoruz */
+html, body, #viewDiv {
     margin: 0;
     padding: 0;
     height: 100%;
     width: 100%;
     overflow: hidden;
-}
-
-</style >
 }
