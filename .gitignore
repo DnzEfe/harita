@@ -1,0 +1,7 @@
+﻿################################################################################
+# Bu .gitignore dosyası Microsoft(R) Visual Studio tarafından otomatik olarak oluşturulmuştur.
+################################################################################
+
+/deniz_harita/.vs
+/.vs
+/turkiye_haritası/.vs
