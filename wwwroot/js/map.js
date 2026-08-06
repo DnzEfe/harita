@@ -3,11 +3,12 @@
     "esri/views/MapView",
     "esri/Graphic",
     "esri/layers/GraphicsLayer",
+    "esri/layers/GeoJSONLayer", // 1. İl sınırları için eklendi
     "esri/widgets/Fullscreen",
     "esri/widgets/BasemapGallery",
     "esri/widgets/Expand",
-    "esri/widgets/Search" // 1. Arama modülü eklendi
-], function (Map, MapView, Graphic, GraphicsLayer, Fullscreen, BasemapGallery, Expand, Search) {
+    "esri/widgets/Search"
+], function (Map, MapView, Graphic, GraphicsLayer, GeoJSONLayer, Fullscreen, BasemapGallery, Expand, Search) {
 
     const map = new Map({
         basemap: "satellite"
@@ -19,6 +20,42 @@
         center: [35.2433, 38.9637],
         zoom: 6
     });
+
+    // =========================================================
+    // İL SINIRLARI + İSİMLERİ KATMANI
+    // =========================================================
+    const ilSinirlariLayer = new GeoJSONLayer({
+        url: "https://raw.githubusercontent.com/uyasarkocal/borders-of-turkey/master/lvl1-TR.geojson",
+        title: "İl Sınırları",
+        renderer: {
+            type: "simple",
+            symbol: {
+                type: "simple-fill",
+                color: [255, 255, 255, 0],   // iç dolgu şeffaf
+                outline: { color: [255, 165, 0, 0.9], width: 1.2 }
+            }
+        },
+        // 2. İl isimlerini haritada etiket olarak göster
+        labelsVisible: true,
+        labelingInfo: [{
+            labelPlacement: "always-horizontal",
+            labelExpressionInfo: {
+                expression: "$feature.name" // gerçek alan adını doğrulamak için aşağıdaki notu oku
+            },
+            symbol: {
+                type: "text",
+                color: "white",
+                haloColor: [0, 0, 0, 0.8],
+                haloSize: 1.5,
+                font: { size: 9, family: "sans-serif", weight: "bold" }
+            }
+        }],
+        popupTemplate: {
+            title: "{name}"
+        }
+    });
+
+    map.add(ilSinirlariLayer);
 
     const graphicsLayer = new GraphicsLayer();
     map.add(graphicsLayer);
@@ -51,13 +88,11 @@
     // SOL ÜST KÖŞE: TAM EKRAN VE ALTLIK GALERİSİ
     // =========================================================
 
-    // Tam Ekran Butonu
     const fullscreen = new Fullscreen({
         view: view
     });
     view.ui.add(fullscreen, "top-left");
 
-    // Altlık Harita Galerisi
     const basemapGallery = new BasemapGallery({
         view: view
     });
@@ -74,12 +109,9 @@
     // SAĞ ÜST KÖŞE: ARAMA ÇUBUĞU (SEARCH)
     // =========================================================
 
-    // 2. Arama bileşeni oluşturuldu
     const searchWidget = new Search({
         view: view
     });
-
-    // Arama kutusu haritanın sağ üst alanına yerleştirildi
     view.ui.add(searchWidget, "top-right");
 
 });

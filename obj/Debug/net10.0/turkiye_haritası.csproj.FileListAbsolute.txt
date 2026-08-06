@@ -199,4 +199,4 @@ C:\Users\USER\source\repos\harita\obj\Debug\net10.0\turkiye_haritası.pdb
 C:\Users\USER\source\repos\harita\obj\Debug\net10.0\turkiye_haritası.genruntimeconfig.cache
 C:\Users\USER\source\repos\harita\obj\Debug\net10.0\ref\turkiye_haritası.dll
 C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\kusa13wj5p-{0}-979vnf2rze-979vnf2rze.gz
-C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-pvi58w0s41-pvi58w0s41.gz
+C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-lpborkq797-lpborkq797.gz
