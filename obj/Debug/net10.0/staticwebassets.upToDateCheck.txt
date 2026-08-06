@@ -1,6 +1,8 @@
 wwwroot\css\map.css
 wwwroot\css\site.css
 wwwroot\favicon.ico
+wwwroot\js\git.json
+wwwroot\js\iller.json
 wwwroot\js\site.js
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css.map
@@ -66,6 +68,8 @@ wwwroot\js\map.js
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\wwwroot\css\map.css
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\wwwroot\css\site.css
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\wwwroot\favicon.ico
+C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\wwwroot\js\git.json
+C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\wwwroot\js\iller.json
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\wwwroot\js\site.js
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css.map
