@@ -4,11 +4,14 @@
     "esri/Graphic",
     "esri/layers/GraphicsLayer",
     "esri/layers/GeoJSONLayer",
+    "esri/layers/FeatureLayer",
+    "esri/layers/TileLayer",
     "esri/widgets/Fullscreen",
     "esri/widgets/BasemapGallery",
+    "esri/widgets/LayerList",
     "esri/widgets/Expand",
     "esri/widgets/Search"
-], function (Map, MapView, Graphic, GraphicsLayer, GeoJSONLayer, Fullscreen, BasemapGallery, Expand, Search) {
+], function (Map, MapView, Graphic, GraphicsLayer, GeoJSONLayer, FeatureLayer, TileLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
 
     const map = new Map({
         basemap: "satellite"
@@ -22,7 +25,7 @@
     });
 
     // =========================================================
-    // İL SINIRLARI KATMANI
+    // 1. İL VE İLÇE SINIRLARI KATMANLARI
     // =========================================================
     const ilSinirlariLayer = new GeoJSONLayer({
         url: "https://raw.githubusercontent.com/uyasarkocal/borders-of-turkey/master/lvl1-TR.geojson",
@@ -52,14 +55,10 @@
     });
     map.add(ilSinirlariLayer);
 
-    // =========================================================
-    // İLÇE SINIRLARI KATMANI
-    // =========================================================
     const ilceSinirlariLayer = new GeoJSONLayer({
         url: "https://raw.githubusercontent.com/uyasarkocal/borders-of-turkey/master/lvl2-TR.geojson",
         title: "İlçe Sınırları",
         minScale: 1500000,
-        maxScale: 0,
         renderer: {
             type: "simple",
             symbol: {
@@ -79,45 +78,93 @@
                 haloSize: 1.3,
                 font: { size: 7.5, family: "sans-serif" }
             },
-            minScale: 1500000,
-            maxScale: 0
+            minScale: 1500000
         }],
         popupTemplate: { title: "{name}" }
     });
     map.add(ilceSinirlariLayer);
 
     // =========================================================
+    // 2. FAY HATTLARI VE DEPREM RİSK ZONU
+    // =========================================================
+    const trFayHatLariLayer = new FeatureLayer({
+        url: "https://services1.arcgis.com/0MSEUqKaxRlEPVqi/arcgis/rest/services/Turkey_Faults/FeatureServer/0",
+        title: "Türkiye Diri Fay Hatları",
+        renderer: {
+            type: "simple",
+            symbol: {
+                type: "simple-line",
+                color: [255, 0, 0, 0.95],
+                width: 2.2
+            }
+        },
+        popupTemplate: {
+            title: "Fay Hattı: {NAME_TR}",
+            content: "Tip: {FAULT_TYPE}"
+        }
+    });
+    map.add(trFayHatLariLayer);
+
+    // =========================================================
+    // 3. KORUNAN ALANLAR VE MİLLİ PARKLAR (SADECE TÜRKİYE)
+    // =========================================================
+    const trKorunanAlanlarLayer = new FeatureLayer({
+        url: "https://services5.arcgis.com/GfwifWzHfLocal/arcgis/rest/services/WDPA_Polygons/FeatureServer/0",
+        title: "Türkiye Korunan Alanlar & Milli Parklar",
+        definitionExpression: "ISO3 = 'TUR' OR PARENT_ISO = 'TUR'",
+        renderer: {
+            type: "simple",
+            symbol: {
+                type: "simple-fill",
+                color: [76, 175, 80, 0.35],
+                outline: { color: [46, 125, 50, 0.9], width: 1.2 }
+            }
+        },
+        popupTemplate: {
+            title: "{NAME}",
+            content: "Statü: {DESIG_ENG} ({ORIG_NAME})"
+        }
+    });
+    map.add(trKorunanAlanlarLayer);
+
+    // =========================================================
+    // 4. ULAŞIM VE LOJİSTİK KATMANLARI (HER ÖLÇEKTE GÖRÜNÜR)
+    // =========================================================
+
+    // a) Karayolları ve Otobanlar
+    const karayollariLayer = new TileLayer({
+        url: "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer",
+        title: "Ulaşım: Karayolları ve Otobanlar",
+        opacity: 0.85
+    });
+    map.add(karayollariLayer);
+    
+
+   
+
+    // =========================================================
     // NİŞAN / MARKER KATMANI (ANKARA)
     // =========================================================
-    const graphicsLayer = new GraphicsLayer();
+    const graphicsLayer = new GraphicsLayer({ title: "İşaretler" });
     map.add(graphicsLayer);
 
-    const ankaraPoint = {
-        type: "point",
-        longitude: 32.8597,
-        latitude: 39.9334
-    };
-
-    const markerSymbol = {
-        type: "simple-marker",
-        color: [226, 119, 40],
-        outline: { color: [255, 255, 255], width: 1 }
-    };
-
     const pointGraphic = new Graphic({
-        geometry: ankaraPoint,
-        symbol: markerSymbol,
+        geometry: { type: "point", longitude: 32.8597, latitude: 39.9334 },
+        symbol: {
+            type: "simple-marker",
+            color: [226, 119, 40],
+            outline: { color: [255, 255, 255], width: 1 }
+        },
         attributes: { Name: "Ankara" },
         popupTemplate: {
             title: "{Name}",
             content: "Türkiye'nin başkenti"
         }
     });
-
     graphicsLayer.add(pointGraphic);
 
     // =========================================================
-    // SOL ÜST KÖŞE ARAÇLARI (TAM EKRAN VE ALTLIK GALERİSİ)
+    // SOL ÜST KÖŞE ARAÇLARI
     // =========================================================
     const fullscreen = new Fullscreen({ view: view });
     view.ui.add(fullscreen, "top-left");
@@ -127,15 +174,62 @@
         view: view,
         content: basemapGallery,
         expandIconClass: "esri-icon-basemap",
-        expandTooltip: "Harita Türünü Değiştir"
+        expandTooltip: "Harita Türünü Değiştir",
+        group: "top-left"
     });
     view.ui.add(bgExpand, "top-left");
 
+    // KATMANLAR PANELİ (LayerList)
+    const layerList = new LayerList({
+        view: view,
+        listItemCreatedFunction: function (event) {
+            const item = event.item;
+            item.panel = { content: "legend", open: false };
+
+            const aksiyonlar = [{
+                title: "Katmana Yakınlaş",
+                className: "esri-icon-zoom-out-fixed",
+                id: "yakinlas"
+            }];
+
+            if (item.layer && item.layer.url) {
+                aksiyonlar.push({
+                    title: "Kaynağa Git",
+                    className: "esri-icon-link-external",
+                    id: "kaynak"
+                });
+            }
+            item.actionsSections = [aksiyonlar];
+        }
+    });
+
+    layerList.on("trigger-action", function (event) {
+        const layer = event.item.layer;
+        if (event.action.id === "yakinlas") {
+            if (layer.fullExtent) {
+                view.goTo(layer.fullExtent);
+            } else if (layer.queryExtent) {
+                layer.queryExtent().then(function (res) {
+                    if (res.extent) view.goTo(res.extent);
+                });
+            }
+        }
+        if (event.action.id === "kaynak" && layer.url) {
+            window.open(layer.url, "_blank");
+        }
+    });
+
+    const layerListExpand = new Expand({
+        view: view,
+        content: layerList,
+        expandIconClass: "esri-icon-layers",
+        expandTooltip: "Katmanlar",
+        group: "top-left"
+    });
+    view.ui.add(layerListExpand, "top-left");
+
     // =========================================================
-    // YENİ BUTON: İL LİSTESİ (SOL ÜST)
-    // Bu sürümde GeoJSON dosyasının alan adlarına (name, il_adi vs.)
-    // hiç bağımlı değil — 81 ilin merkez koordinatları sabit olarak
-    // koda gömülü, dolayısıyla dosya kaynaklı sorunlardan etkilenmez.
+    // İL LİSTESİ PANELİ (81 İL)
     // =========================================================
     const illerListesi = [
         { ad: "Adana", lat: 37.000000, lon: 35.321333 },
@@ -221,7 +315,6 @@
         { ad: "Düzce", lat: 40.843849, lon: 31.156540 }
     ];
 
-    // Alfabetik sıraya diz (Türkçe karakter duyarlı)
     illerListesi.sort(function (a, b) { return a.ad.localeCompare(b.ad, "tr"); });
 
     const ilListePanel = document.createElement("div");
@@ -263,7 +356,7 @@
     view.ui.add(ilListeExpand, "top-left");
 
     // =========================================================
-    // SAĞ ÜST KÖŞE: ARAMA ÇUBUĞU (SEARCH)
+    // SAĞ ÜST KÖŞE: ARAMA ÇUBUĞU
     // =========================================================
     const searchWidget = new Search({ view: view });
     view.ui.add(searchWidget, "top-right");
