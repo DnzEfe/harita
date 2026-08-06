@@ -14,9 +14,10 @@
     "esri/widgets/Daylight",
     "esri/widgets/Home",
     "esri/layers/GeoJSONLayer",
-    "esri/widgets/LayerList", // YENİ: Katman Listesi Aracı
-    "esri/layers/TileLayer"   // YENİ: Yollar ve Şehirler gibi hazır harita katmanları için
-], function (Map, MapView, SceneView, Graphic, GraphicsLayer, Fullscreen, BasemapGallery, Expand, Basemap, Search, DistanceMeasurement2D, DirectLineMeasurement3D, Daylight, Home, GeoJSONLayer, LayerList, TileLayer) {
+    "esri/widgets/LayerList",
+    "esri/layers/TileLayer",
+    "esri/widgets/Weather" // YENİ: Hava Durumu Aracı
+], function (Map, MapView, SceneView, Graphic, GraphicsLayer, Fullscreen, BasemapGallery, Expand, Basemap, Search, DistanceMeasurement2D, DirectLineMeasurement3D, Daylight, Home, GeoJSONLayer, LayerList, TileLayer, Weather) {
 
     // --- 1. HARİTA VE GÖRÜNÜM AYARLARI ---
     const map = new Map({
@@ -24,9 +25,7 @@
         ground: "world-elevation"
     });
 
-    // --- 2. KATMANLARI OLUŞTURMA (LayerList bunları otomatik algılar) ---
-
-    // A. Kendi GeoJSON İl Sınırları Katmanımız
+    // --- 2. KATMANLARI OLUŞTURMA ---
     const geojsonUrl = "/js/iller.json";
     const sinirTasarimi = {
         type: "simple",
@@ -52,21 +51,18 @@
         }]
     });
 
-    // B. Yollar, Otobanlar ve Demir Yolları Katmanı (Esri Sunucusundan)
     const ulasimLayer = new TileLayer({
         url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer",
         title: "Otobanlar, Sokaklar ve Demir Yolları",
-        visible: false // Başlangıçta gözü kapalı gelsin (tıklayarak açılabilir)
+        visible: false
     });
 
-    // C. Şehirler, İlçeler ve Önemli Yerler Katmanı (Esri Sunucusundan)
     const sehirlerLayer = new TileLayer({
         url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer",
         title: "Şehirler ve Yerleşim Yerleri",
         visible: false
     });
 
-    // Katmanları haritaya ekle (Katman listesi aracı bu sıraya göre gösterecek)
     map.addMany([sehirlerLayer, ulasimLayer, ilSinirlariLayer]);
     // ---------------------------------------------
 
@@ -112,12 +108,11 @@
     const searchWidget = new Search({ view: activeView });
     const searchExpand = new Expand({ view: activeView, content: searchWidget, expandIconClass: "esri-icon-search" });
 
-    // YENİ: Katman Listesi (LayerList) Aracı ve Butonu
     const layerList = new LayerList({ view: activeView });
     const layerListExpand = new Expand({
         view: activeView,
         content: layerList,
-        expandIconClass: "esri-icon-layers", // Katmanlar İkonu
+        expandIconClass: "esri-icon-layers",
         expandTooltip: "Katmanları Aç / Kapat"
     });
 
@@ -167,8 +162,17 @@
     const daylightWidget = new Daylight({ view: view3D, dateOrSeason: "season" });
     const daylightExpand = new Expand({ view: view3D, content: daylightWidget, expandIconClass: "esri-icon-lightbulb" });
 
-    // Başlangıçta sol menüyü diz (layerListExpand eklendi)
-    activeView.ui.add([fullscreen, homeWidget, basemapExpand, layerListExpand, searchExpand, measureExpand3D, daylightExpand, toggleButton], "top-left");
+    // YENİ: Hava Durumu Widget'ı (Sadece 3D için)
+    const weatherWidget = new Weather({ view: view3D });
+    const weatherExpand = new Expand({
+        view: view3D,
+        content: weatherWidget,
+        expandIconClass: "esri-icon-cloudy", // Bulut ikonu
+        expandTooltip: "Hava Durumu Efektleri"
+    });
+
+    // Başlangıçta sol menüyü diz (weatherExpand eklendi)
+    activeView.ui.add([fullscreen, homeWidget, basemapExpand, layerListExpand, searchExpand, measureExpand3D, daylightExpand, weatherExpand, toggleButton], "top-left");
 
 
     // --- 7. 2D / 3D BUTONUNA TIKLANDIĞINDA ÇALIŞACAK MANTIK ---
@@ -196,11 +200,12 @@
         basemapGallery.view = activeView;
         searchExpand.view = activeView;
         searchWidget.view = activeView;
-        layerList.view = activeView; // YENİ: Katman listesi de yeni haritayı bilsin
+        layerList.view = activeView;
         layerListExpand.view = activeView;
 
+        // Menü diziliminde hava durumu sadece 3D'ye ekleniyor
         if (activeView.type === "3d") {
-            activeView.ui.add([fullscreen, homeWidget, basemapExpand, layerListExpand, searchExpand, measureExpand3D, daylightExpand, toggleButton], "top-left");
+            activeView.ui.add([fullscreen, homeWidget, basemapExpand, layerListExpand, searchExpand, measureExpand3D, daylightExpand, weatherExpand, toggleButton], "top-left");
         } else {
             activeView.ui.add([fullscreen, homeWidget, basemapExpand, layerListExpand, searchExpand, measureExpand2D, toggleButton], "top-left");
         }
