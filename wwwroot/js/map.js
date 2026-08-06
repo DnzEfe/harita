@@ -3,7 +3,7 @@
     "esri/views/MapView",
     "esri/Graphic",
     "esri/layers/GraphicsLayer",
-    "esri/layers/GeoJSONLayer", // 1. İl sınırları için eklendi
+    "esri/layers/GeoJSONLayer",
     "esri/widgets/Fullscreen",
     "esri/widgets/BasemapGallery",
     "esri/widgets/Expand",
@@ -23,6 +23,7 @@
 
     // =========================================================
     // İL SINIRLARI + İSİMLERİ KATMANI
+    // DEĞİŞTİRİLDİ: Daha kalın, daha parlak sarı çizgi -> ilçeden net ayrışsın
     // =========================================================
     const ilSinirlariLayer = new GeoJSONLayer({
         url: "https://raw.githubusercontent.com/uyasarkocal/borders-of-turkey/master/lvl1-TR.geojson",
@@ -31,31 +32,60 @@
             type: "simple",
             symbol: {
                 type: "simple-fill",
-                color: [255, 255, 255, 0],   // iç dolgu şeffaf
-                outline: { color: [255, 165, 0, 0.9], width: 1.2 }
+                color: [255, 255, 255, 0],
+                outline: { color: [255, 221, 0, 0.95], width: 1.6 } 
             }
         },
-        // 2. İl isimlerini haritada etiket olarak göster
         labelsVisible: true,
         labelingInfo: [{
             labelPlacement: "always-horizontal",
-            labelExpressionInfo: {
-                expression: "$feature.name" // gerçek alan adını doğrulamak için aşağıdaki notu oku
-            },
+            labelExpressionInfo: { expression: "$feature.name" },
             symbol: {
                 type: "text",
                 color: "white",
-                haloColor: [0, 0, 0, 0.8],
+                haloColor: [0, 0, 0, 0.85],
                 haloSize: 1.5,
                 font: { size: 9, family: "sans-serif", weight: "bold" }
             }
         }],
-        popupTemplate: {
-            title: "{name}"
-        }
+        popupTemplate: { title: "{name}" }
     });
-
     map.add(ilSinirlariLayer);
+
+    
+    const ilceSinirlariLayer = new GeoJSONLayer({
+        url: "https://raw.githubusercontent.com/uyasarkocal/borders-of-turkey/master/lvl2-TR.geojson",
+        title: "İlçe Sınırları",
+
+        minScale: 1500000,  
+        maxScale: 0,
+
+        renderer: {
+            type: "simple",
+            symbol: {
+                type: "simple-fill",
+                color: [255, 255, 255, 0],
+                outline: { color: [140, 190, 255, 0.55], width: 0.5 } 
+            }
+        },
+        labelsVisible: true,
+        labelingInfo: [{
+            labelPlacement: "always-horizontal",
+            labelExpressionInfo: { expression: "$feature.name" },
+            symbol: {
+                type: "text",
+                color: [255, 255, 255, 0.95],  
+                haloColor: [0, 0, 0, 0.85],     
+                haloSize: 1.3,                  
+                font: { size: 7.5, family: "sans-serif" } 
+            },
+            minScale: 1500000,
+            maxScale: 0
+        }],
+
+        popupTemplate: { title: "{name}" }
+    });
+    map.add(ilceSinirlariLayer);
 
     const graphicsLayer = new GraphicsLayer();
     map.add(graphicsLayer);
@@ -87,16 +117,10 @@
     // =========================================================
     // SOL ÜST KÖŞE: TAM EKRAN VE ALTLIK GALERİSİ
     // =========================================================
-
-    const fullscreen = new Fullscreen({
-        view: view
-    });
+    const fullscreen = new Fullscreen({ view: view });
     view.ui.add(fullscreen, "top-left");
 
-    const basemapGallery = new BasemapGallery({
-        view: view
-    });
-
+    const basemapGallery = new BasemapGallery({ view: view });
     const bgExpand = new Expand({
         view: view,
         content: basemapGallery,
@@ -108,10 +132,7 @@
     // =========================================================
     // SAĞ ÜST KÖŞE: ARAMA ÇUBUĞU (SEARCH)
     // =========================================================
-
-    const searchWidget = new Search({
-        view: view
-    });
+    const searchWidget = new Search({ view: view });
     view.ui.add(searchWidget, "top-right");
 
 });
