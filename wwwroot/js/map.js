@@ -2,6 +2,7 @@
     "esri/Map",
     "esri/views/MapView",
     "esri/Graphic",
+    "esri/geometry/Point",
     "esri/layers/GraphicsLayer",
     "esri/layers/GeoJSONLayer",
     "esri/layers/FeatureLayer",
@@ -11,7 +12,17 @@
     "esri/widgets/LayerList",
     "esri/widgets/Expand",
     "esri/widgets/Search"
-], function (Map, MapView, Graphic, GraphicsLayer, GeoJSONLayer, FeatureLayer, TileLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
+], function (Map, MapView, Graphic, Point, GraphicsLayer, GeoJSONLayer, FeatureLayer, TileLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
+
+    // Türkçe karakter duyarlı metin eşleme fonksiyonu
+    function trNormalize(str) {
+        if (!str) return "";
+        return str.toString()
+            .replace(/İ/g, "i")
+            .replace(/I/g, "ı")
+            .toLocaleLowerCase('tr-TR')
+            .trim();
+    }
 
     const map = new Map({
         basemap: "satellite"
@@ -21,12 +32,18 @@
         container: "viewDiv",
         map: map,
         center: [35.2433, 38.9637],
-        zoom: 6
+        zoom: 6,
+        highlightOptions: {
+            color: [0, 255, 255, 1], // Parlak Turkuaz Highlight
+            fillOpacity: 0.4,
+            haloOpacity: 0.95
+        }
     });
 
     // =========================================================
     // 1. İL VE İLÇE SINIRLARI KATMANLARI
     // =========================================================
+
     const ilSinirlariLayer = new GeoJSONLayer({
         url: "https://raw.githubusercontent.com/uyasarkocal/borders-of-turkey/master/lvl1-TR.geojson",
         title: "İl Sınırları",
@@ -36,7 +53,10 @@
             symbol: {
                 type: "simple-fill",
                 color: [255, 255, 255, 0],
-                outline: { color: [255, 221, 0, 0.95], width: 1.6 }
+                outline: {
+                    color: [255, 170, 0, 1],
+                    width: 3.0
+                }
             }
         },
         labelsVisible: true,
@@ -45,26 +65,61 @@
             labelExpressionInfo: { expression: "$feature.name" },
             symbol: {
                 type: "text",
-                color: "white",
-                haloColor: [0, 0, 0, 0.85],
-                haloSize: 1.5,
-                font: { size: 9, family: "sans-serif", weight: "bold" }
+                color: "#FFFFFF",
+                haloColor: [0, 0, 0, 0.9],
+                haloSize: 2.0,
+                font: { size: 10, family: "sans-serif", weight: "bold" }
             }
         }],
-        popupTemplate: { title: "{name}" }
+        popupTemplate: {
+            title: "İl: {name}",
+            expressionInfos: [
+                {
+                    name: "yuzolcumu-km2",
+                    title: "Yüzölçümü",
+                    expression: "Text(Round(AreaGeodetic($feature, 'square-kilometers'), 0), '#,###') + ' km²'"
+                },
+                {
+                    name: "cevre-km",
+                    title: "Sınır Çevre Uzunluğu",
+                    expression: "Text(Round(LengthGeodetic($feature, 'kilometers'), 1), '#,###.#') + ' km'"
+                }
+            ],
+            content: [
+                {
+                    type: "fields",
+                    fieldInfos: [
+                        { fieldName: "name", label: "İl Adı" },
+                        { fieldName: "expression/yuzolcumu-km2", label: "Yüzölçümü" },
+                        { fieldName: "expression/cevre-km", label: "Sınır Uzunluğu" }
+                    ]
+                }
+            ]
+        }
     });
     map.add(ilSinirlariLayer);
+
+    let ilSinirlariLayerView = null;
+    let aktifHighlight = null;
+
+    view.whenLayerView(ilSinirlariLayer).then(function (layerView) {
+        ilSinirlariLayerView = layerView;
+    });
 
     const ilceSinirlariLayer = new GeoJSONLayer({
         url: "https://raw.githubusercontent.com/uyasarkocal/borders-of-turkey/master/lvl2-TR.geojson",
         title: "İlçe Sınırları",
-        minScale: 1500000,
+        minScale: 2000000,
         renderer: {
             type: "simple",
             symbol: {
                 type: "simple-fill",
                 color: [255, 255, 255, 0],
-                outline: { color: [140, 190, 255, 0.55], width: 0.5 }
+                outline: {
+                    color: [0, 220, 255, 0.85],
+                    width: 1.2,
+                    style: "dash"
+                }
             }
         },
         labelsVisible: true,
@@ -73,19 +128,36 @@
             labelExpressionInfo: { expression: "$feature.name" },
             symbol: {
                 type: "text",
-                color: [255, 255, 255, 0.95],
-                haloColor: [0, 0, 0, 0.85],
-                haloSize: 1.3,
-                font: { size: 7.5, family: "sans-serif" }
+                color: "#E0F7FA",
+                haloColor: [0, 0, 0, 0.95],
+                haloSize: 2.0,
+                font: { size: 9, family: "sans-serif", weight: "normal" }
             },
-            minScale: 1500000
+            minScale: 2000000
         }],
-        popupTemplate: { title: "{name}" }
+        popupTemplate: {
+            title: "İlçe: {name}",
+            expressionInfos: [
+                {
+                    name: "ilce-yuzolcumu",
+                    expression: "Text(Round(AreaGeodetic($feature, 'square-kilometers'), 1), '#,###.#') + ' km²'"
+                }
+            ],
+            content: [
+                {
+                    type: "fields",
+                    fieldInfos: [
+                        { fieldName: "name", label: "İlçe Adı" },
+                        { fieldName: "expression/ilce-yuzolcumu", label: "Yüzölçümü" }
+                    ]
+                }
+            ]
+        }
     });
     map.add(ilceSinirlariLayer);
 
     // =========================================================
-    // 2. FAY HATTLARI VE DEPREM RİSK ZONU
+    // 2. FAY HATTLARI VE DİĞER KATMANLAR
     // =========================================================
     const trFayHatLariLayer = new FeatureLayer({
         url: "https://services1.arcgis.com/0MSEUqKaxRlEPVqi/arcgis/rest/services/Turkey_Faults/FeatureServer/0",
@@ -105,9 +177,6 @@
     });
     map.add(trFayHatLariLayer);
 
-    // =========================================================
-    // 3. KORUNAN ALANLAR VE MİLLİ PARKLAR (SADECE TÜRKİYE)
-    // =========================================================
     const trKorunanAlanlarLayer = new FeatureLayer({
         url: "https://services5.arcgis.com/GfwifWzHfLocal/arcgis/rest/services/WDPA_Polygons/FeatureServer/0",
         title: "Türkiye Korunan Alanlar & Milli Parklar",
@@ -127,45 +196,17 @@
     });
     map.add(trKorunanAlanlarLayer);
 
-    // =========================================================
-    // 4. ULAŞIM VE LOJİSTİK KATMANLARI (HER ÖLÇEKTE GÖRÜNÜR)
-    // =========================================================
-
-    // a) Karayolları ve Otobanlar
     const karayollariLayer = new TileLayer({
         url: "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer",
         title: "Ulaşım: Karayolları ve Otobanlar",
         opacity: 0.85
     });
     map.add(karayollariLayer);
-    
 
-   
-
-    // =========================================================
-    // NİŞAN / MARKER KATMANI (ANKARA)
-    // =========================================================
     const graphicsLayer = new GraphicsLayer({ title: "İşaretler" });
     map.add(graphicsLayer);
 
-    const pointGraphic = new Graphic({
-        geometry: { type: "point", longitude: 32.8597, latitude: 39.9334 },
-        symbol: {
-            type: "simple-marker",
-            color: [226, 119, 40],
-            outline: { color: [255, 255, 255], width: 1 }
-        },
-        attributes: { Name: "Ankara" },
-        popupTemplate: {
-            title: "{Name}",
-            content: "Türkiye'nin başkenti"
-        }
-    });
-    graphicsLayer.add(pointGraphic);
-
-    // =========================================================
     // SOL ÜST KÖŞE ARAÇLARI
-    // =========================================================
     const fullscreen = new Fullscreen({ view: view });
     view.ui.add(fullscreen, "top-left");
 
@@ -179,7 +220,6 @@
     });
     view.ui.add(bgExpand, "top-left");
 
-    // KATMANLAR PANELİ (LayerList)
     const layerList = new LayerList({
         view: view,
         listItemCreatedFunction: function (event) {
@@ -229,7 +269,7 @@
     view.ui.add(layerListExpand, "top-left");
 
     // =========================================================
-    // İL LİSTESİ PANELİ (81 İL)
+    // İL LİSTESİ PANELİ
     // =========================================================
     const illerListesi = [
         { ad: "Adana", lat: 37.000000, lon: 35.321333 },
@@ -321,7 +361,7 @@
     ilListePanel.style.cssText = "background:white;padding:10px;width:230px;max-height:420px;overflow-y:auto;font-family:sans-serif;";
 
     const baslik = document.createElement("b");
-    baslik.textContent = "İller";
+    baslik.textContent = "İller (81 İl)";
     baslik.style.fontSize = "13px";
     ilListePanel.appendChild(baslik);
 
@@ -337,8 +377,59 @@
         li.addEventListener("mouseout", function () { li.style.background = "white"; });
 
         li.addEventListener("click", function () {
-            view.goTo({ center: [il.lon, il.lat], zoom: 9 });
+            // Panel'i önce kapat ki view boyutu goTo'dan ÖNCE sabitlensin
             ilListeExpand.collapse();
+
+            // Var olan highlight'ı temizle
+            if (aktifHighlight) {
+                aktifHighlight.remove();
+                aktifHighlight = null;
+            }
+
+            const query = ilSinirlariLayer.createQuery();
+            query.where = "1=1";
+            query.returnGeometry = true;
+            query.outFields = ["*"];
+
+            ilSinirlariLayer.queryFeatures(query).then(function (result) {
+                const feature = result.features.find(function (f) {
+                    const featName = f.attributes.name || f.attributes.NAME || f.attributes.NAME_1 || "";
+                    return trNormalize(featName) === trNormalize(il.ad);
+                });
+
+                if (feature) {
+                    feature.popupTemplate = ilSinirlariLayer.popupTemplate;
+
+                    const centerPoint = feature.geometry.extent
+                        ? feature.geometry.extent.center
+                        : new Point({ longitude: il.lon, latitude: il.lat });
+
+                    // Highlight uygulamak için layerView'ı bekle (henüz hazır değilse)
+                    const highlightPromise = ilSinirlariLayerView
+                        ? Promise.resolve(ilSinirlariLayerView)
+                        : view.whenLayerView(ilSinirlariLayer);
+
+                    highlightPromise.then(function (layerView) {
+                        ilSinirlariLayerView = layerView;
+                        aktifHighlight = layerView.highlight(feature);
+                    });
+
+                    // Önce zoom'u tamamla, SONRA popup'ı aç
+                    view.goTo({
+                        target: feature.geometry.extent || feature.geometry,
+                        zoom: 8
+                    }, { duration: 600 }).then(function () {
+                        view.popup.open({
+                            features: [feature],
+                            location: centerPoint
+                        });
+                    });
+
+                } else {
+                    const defaultPoint = new Point({ longitude: il.lon, latitude: il.lat });
+                    view.goTo({ center: defaultPoint, zoom: 8 });
+                }
+            });
         });
 
         ul.appendChild(li);
@@ -355,9 +446,7 @@
     });
     view.ui.add(ilListeExpand, "top-left");
 
-    // =========================================================
     // SAĞ ÜST KÖŞE: ARAMA ÇUBUĞU
-    // =========================================================
     const searchWidget = new Search({ view: view });
     view.ui.add(searchWidget, "top-right");
 
