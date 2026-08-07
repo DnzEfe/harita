@@ -14,7 +14,7 @@
     "esri/widgets/Search"
 ], function (Map, MapView, Graphic, Point, GraphicsLayer, GeoJSONLayer, FeatureLayer, TileLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
 
-    // JS Tarafı İçin Gelişmiş Metin Normalizasyonu
+    // Türkçe Karakter Normalizasyonu
     function trNormalize(str) {
         if (!str) return "";
         return str.toString()
@@ -27,6 +27,43 @@
             .replace(/ş/g, "s")
             .replace(/ü/g, "u")
             .replace(/[^a-z0-9]/g, "");
+    }
+
+    // Doğru İli Bulmak İçin Aşamalı ve Güvenli Eşleştirme Fonksiyonu
+    function findMatchingFeature(features, rawTargetName) {
+        const normTarget = trNormalize(rawTargetName);
+        if (!normTarget) return null;
+
+        // Özel isim/kısaltma haritası
+        const aliasMap = {
+            "afyon": "afyonkarahisar",
+            "icel": "mersin",
+            "maras": "kahramanmaras",
+            "kmaras": "kahramanmaras",
+            "urfa": "sanliurfa",
+            "surfa": "sanliurfa",
+            "antep": "gaziantep"
+        };
+
+        const mappedTarget = aliasMap[normTarget] || normTarget;
+
+        // 1. AŞAMA: Birebir Tam Eşleşme (En Güvenlisi)
+        let match = features.find(function (f) {
+            const featName = trNormalize(f.attributes.name || f.attributes.NAME || f.attributes.il_adi || f.attributes.NAME_1 || "");
+            return featName === mappedTarget || featName === normTarget;
+        });
+
+        if (match) return match;
+
+        // 2. AŞAMA: Kelime Başlangıcı Eşleşmesi (Örn: "Afyon" -> "Afyonkarahisar" ile başlar)
+        match = features.find(function (f) {
+            const featName = trNormalize(f.attributes.name || f.attributes.NAME || f.attributes.il_adi || f.attributes.NAME_1 || "");
+            if (!featName) return false;
+            return (featName.startsWith(mappedTarget) && mappedTarget.length >= 3) ||
+                (mappedTarget.startsWith(featName) && featName.length >= 3);
+        });
+
+        return match;
     }
 
     const map = new Map({
@@ -272,14 +309,9 @@
     const layerList = new LayerList({
         view: view,
         listItemCreatedFunction: function (event) {
-            // Fonksiyonun TAMAMI try/catch içinde: herhangi bir satır hata
-            // fırlatırsa bile widget'ın render'ı durmaz, sadece o item için
-            // bir uyarı loglanır ve diğer katmanlar normal şekilde listelenir.
             try {
                 const item = event.item;
 
-                // NOT: GraphicsLayer ve group katmanların renderer/legend desteği yoktur.
-                // Bu katmanlara legend paneli atamaya çalışmak hataya yol açabilir.
                 if (item.layer && item.layer.type !== "graphics" && item.layer.type !== "group") {
                     item.panel = { content: "legend", open: false };
                 }
@@ -299,7 +331,7 @@
                 }
                 item.actionsSections = [aksiyonlar];
             } catch (e) {
-                console.warn("LayerList item oluşturulurken hata:", event.item && event.item.layer && event.item.layer.title, e);
+                console.warn("LayerList item hatası:", e);
             }
         }
     });
@@ -330,9 +362,8 @@
     view.ui.add(layerListExpand, "top-left");
 
     // =========================================================
-    // 3. İL LİSTESİ PANELİ (Controller'dan JSON fetch)
+    // 3. İL LİSTESİ PANELİ (GÜNCELLENEN VE DÜZELTİLEN KISIM)
     // =========================================================
-    // Iller() action'ı HomeController içinde tanımlı, bu yüzden URL /Home/Iller.
     let illerListesi = [];
     let ilListeExpand = null;
 
@@ -345,9 +376,14 @@
         })
         .then(function (data) {
             illerListesi = data;
-            illerListesi.sort(function (a, b) { return a.plaka - b.plaka; });
 
-            // ---- Liste panelini oluşturan kod artık veri geldikten SONRA çalışıyor ----
+            // Plakaya göre sıralama (Plaka yoksa ada göre)
+            illerListesi.sort(function (a, b) {
+                const plakaA = a.plaka || a.plakaNo || 0;
+                const plakaB = b.plaka || b.plakaNo || 0;
+                return plakaA - plakaB;
+            });
+
             const ilListePanel = document.createElement("div");
             ilListePanel.style.cssText = "background:white;padding:10px;width:240px;max-height:420px;overflow-y:auto;font-family:sans-serif;";
 
@@ -360,9 +396,13 @@
             ul.style.cssText = "list-style:none;padding:0;margin:8px 0 0 0;";
 
             illerListesi.forEach(function (il) {
+                // İl adını sunucudan gelen her türlü olasılığa karşı yakala
+                const ilAd = il.ad || il.adi || il.il_adi || il.ilAdi || il.name || il.NAME || "";
+                const plakaVal = il.plaka || il.plakaNo || il.id || 0;
+                const plakaStr = plakaVal > 0 ? (plakaVal < 10 ? "0" + plakaVal : plakaVal) : "--";
+
                 const li = document.createElement("li");
-                const plakaStr = il.plaka < 10 ? "0" + il.plaka : il.plaka;
-                li.textContent = plakaStr + " - " + il.ad;
+                li.textContent = plakaStr + " - " + ilAd;
                 li.style.cssText = "padding:6px 4px;cursor:pointer;border-bottom:1px solid #eee;color:#222;font-size:12.5px;";
 
                 li.addEventListener("mouseover", function () { li.style.background = "#f2f2f2"; });
@@ -376,47 +416,62 @@
                         aktifHighlight = null;
                     }
 
-                    const query = ilSinirlariLayer.createQuery();
+                    const queryTarget = ilSinirlariLayerView || ilSinirlariLayer;
+                    const query = queryTarget.createQuery();
                     query.where = "1=1";
                     query.returnGeometry = true;
                     query.outFields = ["*"];
 
-                    ilSinirlariLayer.queryFeatures(query).then(function (result) {
-                        const feature = result.features.find(function (f) {
-                            const featName = f.attributes.name || f.attributes.NAME || f.attributes.NAME_1 || "";
-                            return trNormalize(featName) === trNormalize(il.ad);
-                        });
+                    queryTarget.queryFeatures(query).then(function (result) {
+                        // Güvenli ve Aşamalı Eşleştirme Fonksiyonu Çağrısı
+                        let feature = findMatchingFeature(result.features, ilAd);
+
+                        let targetGeometry;
+                        let locationPoint;
 
                         if (feature) {
+                            feature.layer = ilSinirlariLayer;
                             feature.popupTemplate = ilSinirlariLayer.popupTemplate;
 
-                            const centerPoint = feature.geometry.extent
-                                ? feature.geometry.extent.center
-                                : new Point({ longitude: il.lon, latitude: il.lat });
+                            if (ilSinirlariLayerView) {
+                                aktifHighlight = ilSinirlariLayerView.highlight(feature);
+                            }
 
-                            const highlightPromise = ilSinirlariLayerView
-                                ? Promise.resolve(ilSinirlariLayerView)
-                                : view.whenLayerView(ilSinirlariLayer);
-
-                            highlightPromise.then(function (layerView) {
-                                ilSinirlariLayerView = layerView;
-                                aktifHighlight = layerView.highlight(feature);
-                            });
-
-                            view.goTo({
-                                target: feature.geometry.extent || feature.geometry,
-                                zoom: 8
-                            }, { duration: 600 }).then(function () {
-                                view.popup.open({
-                                    features: [feature],
-                                    location: centerPoint
-                                });
-                            });
-
+                            targetGeometry = feature.geometry.extent || feature.geometry;
+                            locationPoint = feature.geometry.extent ? feature.geometry.extent.center : feature.geometry;
                         } else {
-                            const defaultPoint = new Point({ longitude: il.lon, latitude: il.lat });
-                            view.goTo({ center: defaultPoint, zoom: 8 });
+                            // Haritada poligon ismi birebir tutmazsa Koordinat Fallback'i
+                            const lat = Number(il.lat || il.enlem || 39.0);
+                            const lon = Number(il.lon || il.boylam || 35.0);
+
+                            locationPoint = new Point({
+                                longitude: lon,
+                                latitude: lat,
+                                spatialReference: { wkid: 4326 }
+                            });
+                            targetGeometry = locationPoint;
+
+                            feature = new Graphic({
+                                geometry: locationPoint,
+                                attributes: { name: ilAd, NAME: ilAd },
+                                layer: ilSinirlariLayer,
+                                popupTemplate: ilSinirlariLayer.popupTemplate
+                            });
                         }
+
+                        // Harita hareketi tamamlanınca pop-up'ı tam konumunda aç
+                        view.goTo({
+                            target: targetGeometry,
+                            zoom: 8
+                        }, { duration: 600 }).then(function () {
+                            view.popup.open({
+                                features: [feature],
+                                location: locationPoint
+                            });
+                        });
+
+                    }).catch(function (err) {
+                        console.error("Sorgu hatası:", err);
                     });
                 });
 
@@ -433,7 +488,6 @@
                 group: "top-left"
             });
             view.ui.add(ilListeExpand, "top-left");
-            // ---- Liste paneli sonu ----
         })
         .catch(function (err) {
             console.error("İller verisi alınamadı:", err);
