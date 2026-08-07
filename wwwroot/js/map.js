@@ -16,7 +16,7 @@
     "esri/layers/GeoJSONLayer",
     "esri/widgets/LayerList",
     "esri/layers/TileLayer",
-    "esri/widgets/Weather" // YENİ: Hava Durumu Aracı
+    "esri/widgets/Weather"
 ], function (Map, MapView, SceneView, Graphic, GraphicsLayer, Fullscreen, BasemapGallery, Expand, Basemap, Search, DistanceMeasurement2D, DirectLineMeasurement3D, Daylight, Home, GeoJSONLayer, LayerList, TileLayer, Weather) {
 
     // --- 1. HARİTA VE GÖRÜNÜM AYARLARI ---
@@ -25,7 +25,7 @@
         ground: "world-elevation"
     });
 
-    // --- 2. KATMANLARI OLUŞTURMA ---
+    // --- 2. HAZIR KATMANLARI OLUŞTURMA ---
     const geojsonUrl = "/js/iller.json";
     const sinirTasarimi = {
         type: "simple",
@@ -63,7 +63,12 @@
         visible: false
     });
 
-    map.addMany([sehirlerLayer, ulasimLayer, ilSinirlariLayer]);
+    // Dinamik API noktalarımızın ekleneceği katman
+    const apiNoktalariLayer = new GraphicsLayer({ title: "API'den Gelen Şehirler" });
+
+    // Tüm katmanları haritaya ekle
+    map.addMany([sehirlerLayer, ulasimLayer, ilSinirlariLayer, apiNoktalariLayer]);
+
     // ---------------------------------------------
 
     const baslangicAyarlari = {
@@ -162,16 +167,14 @@
     const daylightWidget = new Daylight({ view: view3D, dateOrSeason: "season" });
     const daylightExpand = new Expand({ view: view3D, content: daylightWidget, expandIconClass: "esri-icon-lightbulb" });
 
-    // YENİ: Hava Durumu Widget'ı (Sadece 3D için)
     const weatherWidget = new Weather({ view: view3D });
     const weatherExpand = new Expand({
         view: view3D,
         content: weatherWidget,
-        expandIconClass: "esri-icon-cloudy", // Bulut ikonu
+        expandIconClass: "esri-icon-cloudy",
         expandTooltip: "Hava Durumu Efektleri"
     });
 
-    // Başlangıçta sol menüyü diz (weatherExpand eklendi)
     activeView.ui.add([fullscreen, homeWidget, basemapExpand, layerListExpand, searchExpand, measureExpand3D, daylightExpand, weatherExpand, toggleButton], "top-left");
 
 
@@ -193,7 +196,6 @@
         activeView.viewpoint = currentViewpoint;
         activeView.container = "viewDiv";
 
-        // Ortak araçlara yeni haritada olduklarını bildir
         fullscreen.view = activeView;
         homeWidget.view = activeView;
         basemapExpand.view = activeView;
@@ -203,7 +205,6 @@
         layerList.view = activeView;
         layerListExpand.view = activeView;
 
-        // Menü diziliminde hava durumu sadece 3D'ye ekleniyor
         if (activeView.type === "3d") {
             activeView.ui.add([fullscreen, homeWidget, basemapExpand, layerListExpand, searchExpand, measureExpand3D, daylightExpand, weatherExpand, toggleButton], "top-left");
         } else {
@@ -214,20 +215,66 @@
     });
 
 
-    // --- 8. SAĞ TIK KONTROLÜ VE ANKARA NOKTASI ---
+    // --- 8. API'DEN VERİ ÇEKME (FETCH) VE GRAFİK KATMANI ---
+    // NOT: Eğer MVC yapısı yaptıysan adresi '/Cities/Index' yapabilirsin. 
+    // Sihirbazla oluşturulan API ise '/api/cities' olarak kalsın.
+    const apiUrl = '/api/cities';
+
+    fetch(apiUrl + '?' + new Date().getTime())
+        .then(response => {
+            if (!response.ok) throw new Error("API yanıt vermedi.");
+            return response.json();
+        })
+        .then(data => {
+            console.log("C#'tan Gelen Şehirler:", data);
+
+            data.forEach(city => {
+                // Büyük-küçük harf uyuşmazlığını çözen güvenli okuma
+                const lat = city.latitude || city.Latitude || city.LATITUDE;
+                const lon = city.longitude || city.Longitude || city.LONGITUDE;
+                const cName = city.name || city.Name || city.NAME;
+                const cPlate = city.plate || city.Plate || city.PLATE;
+
+                if (!lat || !lon) return;
+
+                const pointGraphic = new Graphic({
+                    geometry: {
+                        type: "point",
+                        longitude: lon,
+                        latitude: lat
+                    },
+                    symbol: {
+                        type: "simple-marker",
+                        color: [255, 69, 0], // Parlak Turuncu
+                        outline: { color: [255, 255, 255], width: 2 },
+                        size: "14px"
+                    },
+                    attributes: {
+                        Name: cName,
+                        Plate: cPlate
+                    },
+                    popupTemplate: {
+                        title: "{Name}",
+                        content: `
+                            <div style="font-size: 14px; margin-top: 5px;">
+                                <b>İl Adı:</b> {Name} <br/>
+                                <b>Plaka Kodu:</b> {Plate}
+                            </div>
+                        `
+                    }
+                });
+
+                apiNoktalariLayer.add(pointGraphic);
+            });
+        })
+        .catch(error => {
+            console.error("Şehirler yüklenirken bir hata oluştu:", error);
+        });
+
+
+    // --- 9. FARE İLE KOORDİNAT GÖSTERİMİ VE SAĞ TIK KONTROLÜ ---
     view2D.on("pointer-down", function (event) { if (event.button === 2) measure2D.viewModel.clear(); });
     view3D.on("pointer-down", function (event) { if (event.button === 2) measure3D.viewModel.clear(); });
-
-    const graphicsLayer = new GraphicsLayer();
-    map.add(graphicsLayer);
-
-    const pointGraphic = new Graphic({
-        geometry: { type: "point", longitude: 32.8597, latitude: 39.9334 },
-        symbol: { type: "simple-marker", color: [226, 119, 40], outline: { color: [255, 255, 255], width: 1 } },
-        attributes: { Name: "Ankara" },
-        popupTemplate: { title: "{Name}", content: "Türkiye'nin başkenti" }
-    });
-    graphicsLayer.add(pointGraphic);
 
     function showCoords(event, view) {
         const point = view.toMap({ x: event.x, y: event.y });
