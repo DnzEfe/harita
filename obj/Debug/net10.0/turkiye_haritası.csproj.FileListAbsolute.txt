@@ -201,4 +201,4 @@ C:\Users\USER\source\repos\harita\obj\Debug\net10.0\ref\turkiye_haritası.dll
 C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\kusa13wj5p-{0}-979vnf2rze-979vnf2rze.gz
 C:\Users\USER\source\repos\harita\bin\Debug\net10.0\package-lock.json
 C:\Users\USER\source\repos\harita\bin\Debug\net10.0\package.json
-C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-sc1fuju7dw-sc1fuju7dw.gz
+C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-xnpr4yyc8u-xnpr4yyc8u.gz
