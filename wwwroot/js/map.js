@@ -1,18 +1,17 @@
 ﻿require([
     "esri/Map",
-    "esri/views/MapView",
+    "esri/views/SceneView", // MapView yerine SceneView getirildi
     "esri/Graphic",
     "esri/geometry/Point",
     "esri/layers/GraphicsLayer",
     "esri/layers/GeoJSONLayer",
     "esri/layers/FeatureLayer",
-    "esri/layers/TileLayer",
     "esri/widgets/Fullscreen",
     "esri/widgets/BasemapGallery",
     "esri/widgets/LayerList",
     "esri/widgets/Expand",
     "esri/widgets/Search"
-], function (Map, MapView, Graphic, Point, GraphicsLayer, GeoJSONLayer, FeatureLayer, TileLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
+], function (Map, SceneView, Graphic, Point, GraphicsLayer, GeoJSONLayer, FeatureLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
 
     let illerListesi = [];
 
@@ -30,7 +29,6 @@
             .replace(/[^a-z0-9]/g, "");
     }
 
-    // Harita grafiğindeki özniteliklerden (attributes) il adını tespit eden esnek fonksiyon
     function getIlAdFromAttr(attr) {
         if (!attr) return "";
         if (attr.name) return attr.name;
@@ -42,7 +40,6 @@
         if (attr.NAME_1) return attr.NAME_1;
         if (attr.label) return attr.label;
 
-        // Alternatif olarak anahtar kelimeler içinde ara
         for (let key in attr) {
             const kLower = key.toLowerCase();
             if (kLower.includes("name") || kLower.includes("il") || kLower === "ad") {
@@ -87,9 +84,7 @@
         return match;
     }
 
-    // =========================================================
-    // DİNAMİK İL POP-UP ŞABLONU
-    // =========================================================
+    // POP-UP ŞABLONU
     const ilPopupTemplate = {
         title: function (target) {
             const g = target.graphic;
@@ -101,10 +96,8 @@
             const g = target.graphic;
             const attr = g ? (g.attributes || {}) : {};
 
-            // 1. Grafik özniteliklerinden il adını al
             let featName = getIlAdFromAttr(attr);
 
-            // 2. /Home/Iller verisinden eşleşen ili bul
             let ilData = null;
             if (illerListesi && illerListesi.length > 0 && featName) {
                 const normTarget = trNormalize(featName);
@@ -122,7 +115,6 @@
                 }
             }
 
-            // 3. Plaka Kodunu Belirle
             let plakaVal = ilData ? (ilData.plaka || ilData.Plaka) : null;
             if (plakaVal === null || plakaVal === undefined) {
                 plakaVal = attr.plaka || attr.PLAKA || attr.id || attr.ID || attr.number || null;
@@ -134,10 +126,8 @@
                 plakaStr = pNum < 10 ? "0" + pNum : String(pNum);
             }
 
-            // 4. İl Adı Gösterimi
             const gosterilenAd = featName || (ilData ? (ilData.ad || ilData.adi || ilData.il_adi || ilData.name) : "--");
 
-            // 5. Enlem / Boylam
             let enlem = "--";
             let boylam = "--";
 
@@ -155,7 +145,6 @@
                 if (center && center.longitude) boylam = center.longitude.toFixed(4);
             }
 
-            // 6. Yüzölçümü
             let yuzolcumu = "--";
             if (ilData && (ilData.yuzOlcumu || ilData.yuzolcumu || ilData.yuz_olcumu || ilData.area)) {
                 yuzolcumu = ilData.yuzOlcumu || ilData.yuzolcumu || ilData.yuz_olcumu || ilData.area;
@@ -187,15 +176,25 @@
         }
     };
 
+    // 3D HARİTA TANIMI (ground: "world-elevation" eklendi)
     const map = new Map({
-        basemap: "satellite"
+        basemap: "satellite",
+        ground: "world-elevation" // 3D Yükselti ve dağ/arazi yapısını aktifleştirir
     });
 
-    const view = new MapView({
+    // 3D GÖRÜNÜM (SceneView eklendi)
+    const view = new SceneView({
         container: "viewDiv",
         map: map,
-        center: [35.2433, 38.9637],
-        zoom: 6,
+        camera: {
+            position: {
+                x: 35.2433,
+                y: 35.0000,
+                z: 700000 // Yükseklik (Metre)
+            },
+            tilt: 45, // 3D Açısı (Derece)
+            heading: 0
+        },
         highlightOptions: {
             color: [0, 255, 255, 1],
             fillOpacity: 0.4,
@@ -203,9 +202,7 @@
         }
     });
 
-    // =========================================================
     // KATMANLAR
-    // =========================================================
     const tesislerGraphicsLayer = new GraphicsLayer({ title: "Enerji Tesisleri" });
     map.add(tesislerGraphicsLayer);
 
@@ -244,7 +241,6 @@
         ilSinirlariLayerView = layerView;
     });
 
-    // İLÇE SINIRLARI KATMANI (Etiketler eklendi)
     const ilceSinirlariLayer = new GeoJSONLayer({
         url: "https://raw.githubusercontent.com/uyasarkocal/borders-of-turkey/master/lvl2-TR.geojson",
         title: "İlçe Sınırları",
@@ -286,9 +282,7 @@
     const graphicsLayer = new GraphicsLayer({ title: "İşaretler" });
     map.add(graphicsLayer);
 
-    // =========================================================
     // ARAÇLAR (UI WIDGETS)
-    // =========================================================
     const fullscreen = new Fullscreen({ view: view });
     view.ui.add(fullscreen, "top-left");
 
@@ -312,9 +306,7 @@
     });
     view.ui.add(layerListExpand, "top-left");
 
-    // =========================================================
     // İL LİSTESİ PANELİ
-    // =========================================================
     let ilListeExpand = null;
 
     fetch("/Home/Iller")
@@ -385,7 +377,8 @@
                             });
                         }
 
-                        view.goTo({ target: targetGeometry, zoom: 8 }, { duration: 600 }).then(() => {
+                        // 3D Kameraya göre yumuşak yaklaşma
+                        view.goTo({ target: targetGeometry, heading: 0, tilt: 50 }, { duration: 1000 }).then(() => {
                             view.popup.open({
                                 features: [feature],
                                 location: locationPoint
@@ -406,9 +399,7 @@
     const searchWidget = new Search({ view: view });
     view.ui.add(searchWidget, "top-right");
 
-    // =========================================================
-    // TESİS SEMBOLÜ RENK HARİTASI, ROZET BİLGİSİ VE POPUP ŞABLONU
-    // =========================================================
+    // TESİS İŞLEMLERİ
     function tesisRengiGetir(tur) {
         switch ((tur || "").toUpperCase()) {
             case "GES": return [255, 215, 0];
@@ -476,7 +467,7 @@
         const markerSymbol = {
             type: "simple-marker",
             color: tesisRengiGetir(tesis.tesisTuru || tesis.TesisTuru),
-            size: "12px",
+            size: "14px",
             outline: { color: [255, 255, 255], width: 1.5 }
         };
 
@@ -501,9 +492,7 @@
             .catch(err => console.error("Tesisler çekilirken hata:", err));
     }
 
-    // =========================================================
-    // TESİS EKLEME BUTONU (FAB) VE MODAL FORM MANTIĞI
-    // =========================================================
+    // TESİS EKLEME MODAL VE FAB
     let tesisEklemeModuAktif = false;
     let mapClickHandle = null;
     let selectedTesisTuru = "GES";

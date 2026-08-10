@@ -292,4 +292,4 @@ C:\Users\USER\source\repos\harita\bin\Debug\net10.0\zh-Hant\Microsoft.CodeAnalys
 C:\Users\USER\source\repos\harita\obj\Debug\net10.0\turkiye_haritası.csproj.AssemblyReference.cache
 C:\Users\USER\source\repos\harita\obj\Debug\net10.0\turkiye_.B8771F37.Up2Date
 C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\kusa13wj5p-{0}-lgj7x3cxil-lgj7x3cxil.gz
-C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-pao680wcz6-pao680wcz6.gz
+C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-pfk3y1c1ud-pfk3y1c1ud.gz
