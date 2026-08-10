@@ -1,11 +1,22 @@
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Diagnostics;
+using System.Linq;
+using turkiye_haritası.Data;
 using turkiye_haritası.Models;
 
 namespace turkiye_haritası.Controllers
 {
     public class HomeController : Controller
     {
+        private readonly AppDbContext _context;
+
+        // Veritabanı bağlantısını Constructor üzerinden enjekte ediyoruz
+        public HomeController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         public IActionResult Index()
         {
             return View();
@@ -15,14 +26,37 @@ namespace turkiye_haritası.Controllers
         {
             return View();
         }
-        //deneme
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+        // 1. Tüm Tesisleri PostgreSQL'den Getiren Endpoint
+        [HttpGet]
+        public IActionResult Tesisler()
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            var liste = _context.Tesisler.ToList();
+            return Json(liste);
         }
 
+        // 2. Harita Tıklamasıyla Gelen Yeni Tesisi PostgreSQL'e Kaydeden Endpoint
+        [HttpPost]
+        public IActionResult TesisEkle([FromBody] Tesis yeniTesis)
+        {
+            if (yeniTesis == null)
+            {
+                return BadRequest("Geçersiz veri.");
+            }
+
+            // Kayıt tarihi belirtilmemişse otomatik güncel UTC zamanını atar
+            if (yeniTesis.KayitTarihi == default)
+            {
+                yeniTesis.KayitTarihi = DateTime.UtcNow;
+            }
+
+            _context.Tesisler.Add(yeniTesis);
+            _context.SaveChanges(); // Veritabanına fiziksel kaydı yapar
+
+            return Ok(yeniTesis);
+        }
+
+        // 3. Mevcut İller Listesi
         [HttpGet]
         public IActionResult Iller()
         {
@@ -112,6 +146,12 @@ namespace turkiye_haritası.Controllers
             };
 
             return Json(illerListesi);
+        }
+
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 }

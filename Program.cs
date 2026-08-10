@@ -1,7 +1,14 @@
+using Microsoft.EntityFrameworkCore;
+using turkiye_haritası.Data; // AppDbContext dosyasını Data klasörüne koyduysanız bu kalmalı (Models klasöründeyse 'turkiye_haritası.Models' yapın)
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// PostgreSQL Veritabanı Bağlantısı
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
@@ -24,6 +31,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
-
 
 app.Run();

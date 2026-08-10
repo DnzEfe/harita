@@ -5,3 +5,7 @@
 /deniz_harita/.vs
 /.vs
 /turkiye_haritası/.vs
+bin/
+obj/
+.vs/
+*.user
