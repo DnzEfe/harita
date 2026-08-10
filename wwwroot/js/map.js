@@ -14,6 +14,8 @@
     "esri/widgets/Search"
 ], function (Map, MapView, Graphic, Point, GraphicsLayer, GeoJSONLayer, FeatureLayer, TileLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
 
+    let illerListesi = [];
+
     function trNormalize(str) {
         if (!str) return "";
         return str.toString()
@@ -26,6 +28,30 @@
             .replace(/ş/g, "s")
             .replace(/ü/g, "u")
             .replace(/[^a-z0-9]/g, "");
+    }
+
+    // Harita grafiğindeki özniteliklerden (attributes) il adını tespit eden esnek fonksiyon
+    function getIlAdFromAttr(attr) {
+        if (!attr) return "";
+        if (attr.name) return attr.name;
+        if (attr.NAME) return attr.NAME;
+        if (attr.Name) return attr.Name;
+        if (attr.il_adi) return attr.il_adi;
+        if (attr.IL_ADI) return attr.IL_ADI;
+        if (attr.ilAdi) return attr.ilAdi;
+        if (attr.NAME_1) return attr.NAME_1;
+        if (attr.label) return attr.label;
+
+        // Alternatif olarak anahtar kelimeler içinde ara
+        for (let key in attr) {
+            const kLower = key.toLowerCase();
+            if (kLower.includes("name") || kLower.includes("il") || kLower === "ad") {
+                if (typeof attr[key] === "string" && attr[key].trim().length > 0) {
+                    return attr[key];
+                }
+            }
+        }
+        return "";
     }
 
     function findMatchingFeature(features, rawTargetName) {
@@ -45,14 +71,14 @@
         const mappedTarget = aliasMap[normTarget] || normTarget;
 
         let match = features.find(function (f) {
-            const featName = trNormalize(f.attributes.name || f.attributes.NAME || f.attributes.il_adi || f.attributes.NAME_1 || "");
+            const featName = trNormalize(getIlAdFromAttr(f.attributes));
             return featName === mappedTarget || featName === normTarget;
         });
 
         if (match) return match;
 
         match = features.find(function (f) {
-            const featName = trNormalize(f.attributes.name || f.attributes.NAME || f.attributes.il_adi || f.attributes.NAME_1 || "");
+            const featName = trNormalize(getIlAdFromAttr(f.attributes));
             if (!featName) return false;
             return (featName.startsWith(mappedTarget) && mappedTarget.length >= 3) ||
                 (mappedTarget.startsWith(featName) && featName.length >= 3);
@@ -60,6 +86,94 @@
 
         return match;
     }
+
+    // =========================================================
+    // DİNAMİK İL POP-UP ŞABLONU
+    // =========================================================
+    const ilPopupTemplate = {
+        title: function (target) {
+            const g = target.graphic;
+            const attr = g ? (g.attributes || {}) : {};
+            const featName = getIlAdFromAttr(attr);
+            return featName ? "İl Bilgisi: " + featName : "İl Bilgisi";
+        },
+        content: function (target) {
+            const g = target.graphic;
+            const attr = g ? (g.attributes || {}) : {};
+
+            // 1. Grafik özniteliklerinden il adını al
+            let featName = getIlAdFromAttr(attr);
+
+            // 2. /Home/Iller verisinden eşleşen ili bul
+            let ilData = null;
+            if (illerListesi && illerListesi.length > 0 && featName) {
+                const normTarget = trNormalize(featName);
+                ilData = illerListesi.find(il => {
+                    const ad = trNormalize(il.ad || il.adi || il.il_adi || il.ilAdi || il.name || "");
+                    return ad === normTarget;
+                });
+
+                if (!ilData) {
+                    ilData = illerListesi.find(il => {
+                        const ad = trNormalize(il.ad || il.adi || il.il_adi || il.ilAdi || il.name || "");
+                        return (ad.startsWith(normTarget) && normTarget.length >= 3) ||
+                            (normTarget.startsWith(ad) && ad.length >= 3);
+                    });
+                }
+            }
+
+            // 3. Plaka Kodunu Belirle (İl Verisi -> GeoJSON attributes yedekleri)
+            let plakaVal = ilData ? (ilData.plaka || ilData.Plaka) : null;
+            if (plakaVal === null || plakaVal === undefined) {
+                plakaVal = attr.plaka || attr.PLAKA || attr.id || attr.ID || attr.number || null;
+            }
+
+            let plakaStr = "--";
+            if (plakaVal !== null && plakaVal !== undefined && !isNaN(plakaVal) && Number(plakaVal) > 0) {
+                const pNum = Number(plakaVal);
+                plakaStr = pNum < 10 ? "0" + pNum : String(pNum);
+            }
+
+            // 4. İl Adı Gösterimi
+            const gosterilenAd = featName || (ilData ? (ilData.ad || ilData.adi || ilData.il_adi || ilData.name) : "--");
+
+            // 5. Enlem / Boylam
+            let enlem = "--";
+            let boylam = "--";
+
+            if (ilData && (ilData.enlem || ilData.lat || ilData.Enlem)) {
+                enlem = ilData.enlem || ilData.lat || ilData.Enlem;
+            } else if (g && g.geometry) {
+                const center = g.geometry.extent ? g.geometry.extent.center : g.geometry;
+                if (center && center.latitude) enlem = center.latitude.toFixed(4);
+            }
+
+            if (ilData && (ilData.boylam || ilData.lon || ilData.Boylam)) {
+                boylam = ilData.boylam || ilData.lon || ilData.Boylam;
+            } else if (g && g.geometry) {
+                const center = g.geometry.extent ? g.geometry.extent.center : g.geometry;
+                if (center && center.longitude) boylam = center.longitude.toFixed(4);
+            }
+
+            // 6. Yüzölçümü
+            let yuzolcumu = "--";
+            if (ilData && (ilData.yuzOlcumu || ilData.yuzolcumu || ilData.yuz_olcumu || ilData.area)) {
+                yuzolcumu = ilData.yuzOlcumu || ilData.yuzolcumu || ilData.yuz_olcumu || ilData.area;
+            } else if (attr && (attr.yuzolcumu || attr.area || attr.AREA)) {
+                yuzolcumu = attr.yuzolcumu || attr.area || attr.AREA;
+            }
+
+            return `
+                <div style="font-family: sans-serif; font-size: 13px; line-height: 1.8;">
+                    <b>Plaka Kodu:</b> ${plakaStr}<br/>
+                    <b>İl Adı:</b> ${gosterilenAd}<br/>
+                    <b>Enlem:</b> ${enlem}<br/>
+                    <b>Boylam:</b> ${boylam}<br/>
+                    <b>Yüzölçümü:</b> ${yuzolcumu} ${yuzolcumu !== "--" ? "km²" : ""}
+                </div>
+            `;
+        }
+    };
 
     const map = new Map({
         basemap: "satellite"
@@ -87,6 +201,7 @@
         url: "https://raw.githubusercontent.com/uyasarkocal/borders-of-turkey/master/lvl1-TR.geojson",
         title: "İl Sınırları",
         outFields: ["*"],
+        popupTemplate: ilPopupTemplate,
         renderer: {
             type: "simple",
             symbol: {
@@ -174,7 +289,6 @@
     // =========================================================
     // İL LİSTESİ PANELİ
     // =========================================================
-    let illerListesi = [];
     let ilListeExpand = null;
 
     fetch("/Home/Iller")
@@ -214,6 +328,7 @@
                     const query = queryTarget.createQuery();
                     query.where = "1=1";
                     query.returnGeometry = true;
+                    query.outFields = ["*"];
 
                     queryTarget.queryFeatures(query).then(result => {
                         let feature = findMatchingFeature(result.features, ilAd);
@@ -221,17 +336,25 @@
 
                         if (feature) {
                             feature.layer = ilSinirlariLayer;
+                            feature.popupTemplate = ilPopupTemplate;
                             if (ilSinirlariLayerView) aktifHighlight = ilSinirlariLayerView.highlight(feature);
                             targetGeometry = feature.geometry.extent || feature.geometry;
                             locationPoint = feature.geometry.extent ? feature.geometry.extent.center : feature.geometry;
                         } else {
-                            locationPoint = new Point({ longitude: Number(il.lon || 35.0), latitude: Number(il.lat || 39.0), spatialReference: { wkid: 4326 } });
+                            locationPoint = new Point({ longitude: Number(il.lon || il.boylam || 35.0), latitude: Number(il.lat || il.enlem || 39.0), spatialReference: { wkid: 4326 } });
                             targetGeometry = locationPoint;
-                            feature = new Graphic({ geometry: locationPoint, attributes: { name: ilAd } });
+                            feature = new Graphic({
+                                geometry: locationPoint,
+                                attributes: { name: ilAd },
+                                popupTemplate: ilPopupTemplate
+                            });
                         }
 
                         view.goTo({ target: targetGeometry, zoom: 8 }, { duration: 600 }).then(() => {
-                            view.popup.open({ features: [feature], location: locationPoint });
+                            view.popup.open({
+                                features: [feature],
+                                location: locationPoint
+                            });
                         });
                     });
                 });
@@ -364,7 +487,6 @@
     const modal = document.getElementById("tesisModal");
     const selectIl = document.getElementById("modalIlAdi");
 
-    // Butona tıklandığında popup gösterilmeden doğrudan seçim moduna geçer
     tesisEkleBtn.addEventListener("click", () => {
         tesisEklemeModuAktif = !tesisEklemeModuAktif;
 
