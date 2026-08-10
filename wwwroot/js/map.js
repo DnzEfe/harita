@@ -89,7 +89,6 @@
 
     // =========================================================
     // DİNAMİK İL POP-UP ŞABLONU
-    // (Görsel yapı .popup-card / .popup-row class'ları ile map.css'te tanımlı)
     // =========================================================
     const ilPopupTemplate = {
         title: function (target) {
@@ -123,7 +122,7 @@
                 }
             }
 
-            // 3. Plaka Kodunu Belirle (İl Verisi -> GeoJSON attributes yedekleri)
+            // 3. Plaka Kodunu Belirle
             let plakaVal = ilData ? (ilData.plaka || ilData.Plaka) : null;
             if (plakaVal === null || plakaVal === undefined) {
                 plakaVal = attr.plaka || attr.PLAKA || attr.id || attr.ID || attr.number || null;
@@ -245,6 +244,7 @@
         ilSinirlariLayerView = layerView;
     });
 
+    // İLÇE SINIRLARI KATMANI (Etiketler eklendi)
     const ilceSinirlariLayer = new GeoJSONLayer({
         url: "https://raw.githubusercontent.com/uyasarkocal/borders-of-turkey/master/lvl2-TR.geojson",
         title: "İlçe Sınırları",
@@ -256,7 +256,20 @@
                 color: [255, 255, 255, 0],
                 outline: { color: [0, 220, 255, 0.85], width: 1.2, style: "dash" }
             }
-        }
+        },
+        labelsVisible: true,
+        labelingInfo: [{
+            labelPlacement: "always-horizontal",
+            labelExpressionInfo: { expression: "$feature.name" },
+            symbol: {
+                type: "text",
+                color: "#E0F7FA",
+                haloColor: [0, 0, 0, 0.9],
+                haloSize: 1.5,
+                font: { size: 9, family: "sans-serif", weight: "normal" }
+            },
+            minScale: 1500000
+        }]
     });
     map.add(ilceSinirlariLayer);
 
@@ -406,7 +419,6 @@
         }
     }
 
-    // Popup rozetinde kullanılacak class + etiket eşlemesi (marker rengiyle birebir uyumlu)
     function tesisTipBilgisi(tur) {
         const anahtar = (tur || "").toUpperCase();
         const tablo = {
@@ -491,8 +503,6 @@
 
     // =========================================================
     // TESİS EKLEME BUTONU (FAB) VE MODAL FORM MANTIĞI
-    // Tüm görsel yapı map.css'teki .fab-add-tesis / .tesis-modal /
-    // .form-* / .tesis-type-pill class'larıyla sağlanır.
     // =========================================================
     let tesisEklemeModuAktif = false;
     let mapClickHandle = null;
@@ -503,9 +513,6 @@
     tesisEkleBtn.title = "Haritadan Yeni Tesis Ekle";
     tesisEkleBtn.innerHTML = '<span class="fab-add-tesis__icon" aria-hidden="true">+</span>';
 
-    // esri'nin view.ui köşe sistemi yerine doğrudan sayfaya ekliyoruz;
-    // o köşe attribution/logo çubuğuyla dolu ve esri widget class'ları
-    // olmadan eklenen düz bir buton orada güvenilir şekilde görünmüyor.
     document.body.appendChild(tesisEkleBtn);
 
     const modalHtml = `
