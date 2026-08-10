@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
+    "Method": "TesisEkle",
+    "RelativePath": "api/Tesis",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "yeniTesis",
+        "Type": "turkiye_haritas\u0131.Models.Tesis",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
+    "Method": "TesisleriGetir",
+    "RelativePath": "api/Tesis",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
+    "Method": "TesisSil",
+    "RelativePath": "api/Tesis/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  }
+]

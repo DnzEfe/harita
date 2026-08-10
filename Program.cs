@@ -1,6 +1,13 @@
+using Microsoft.EntityFrameworkCore;
+using turkiye_haritası; // AppDbContext dosyanın bulunduğu namespace
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Servisleri ekliyoruz
+// --- POSTGRESQL SERVİS KAYDI ---
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+// --------------------------------
+
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
