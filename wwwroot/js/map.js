@@ -89,6 +89,7 @@
 
     // =========================================================
     // DİNAMİK İL POP-UP ŞABLONU
+    // (Görsel yapı .popup-card / .popup-row class'ları ile map.css'te tanımlı)
     // =========================================================
     const ilPopupTemplate = {
         title: function (target) {
@@ -164,12 +165,24 @@
             }
 
             return `
-                <div style="font-family: sans-serif; font-size: 13px; line-height: 1.8;">
-                    <b>Plaka Kodu:</b> ${plakaStr}<br/>
-                    <b>İl Adı:</b> ${gosterilenAd}<br/>
-                    <b>Enlem:</b> ${enlem}<br/>
-                    <b>Boylam:</b> ${boylam}<br/>
-                    <b>Yüzölçümü:</b> ${yuzolcumu} ${yuzolcumu !== "--" ? "km²" : ""}
+                <div class="popup-card">
+                    <span class="popup-badge popup-badge--plaka">Plaka ${plakaStr}</span>
+                    <div class="popup-row">
+                        <span class="popup-row__label">İl Adı</span>
+                        <span class="popup-row__value">${gosterilenAd}</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="popup-row__label">Enlem</span>
+                        <span class="popup-row__value">${enlem}</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="popup-row__label">Boylam</span>
+                        <span class="popup-row__value">${boylam}</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="popup-row__label">Yüzölçümü</span>
+                        <span class="popup-row__value">${yuzolcumu}${yuzolcumu !== "--" ? " km²" : ""}</span>
+                    </div>
                 </div>
             `;
         }
@@ -298,29 +311,38 @@
             illerListesi.sort((a, b) => (a.plaka || 0) - (b.plaka || 0));
 
             const ilListePanel = document.createElement("div");
-            ilListePanel.style.cssText = "background:white;padding:10px;width:240px;max-height:420px;overflow-y:auto;font-family:sans-serif;";
+            ilListePanel.className = "il-panel";
 
-            const baslik = document.createElement("b");
+            const baslik = document.createElement("div");
+            baslik.className = "il-panel__header";
             baslik.textContent = "İller (81 İl)";
-            baslik.style.fontSize = "13px";
             ilListePanel.appendChild(baslik);
 
             const ul = document.createElement("ul");
-            ul.style.cssText = "list-style:none;padding:0;margin:8px 0 0 0;";
+            ul.className = "il-panel__list";
 
             illerListesi.forEach(il => {
                 const ilAd = il.ad || il.adi || il.il_adi || il.ilAdi || il.name || "";
                 const plakaVal = il.plaka || 0;
-                const plakaStr = plakaVal > 0 ? (plakaVal < 10 ? "0" + plakaVal : plakaVal) : "--";
+                const plakaStr = plakaVal > 0 ? (plakaVal < 10 ? "0" + plakaVal : String(plakaVal)) : "--";
 
                 const li = document.createElement("li");
-                li.textContent = plakaStr + " - " + ilAd;
-                li.style.cssText = "padding:6px 4px;cursor:pointer;border-bottom:1px solid #eee;color:#222;font-size:12.5px;";
+                li.className = "il-panel__item";
 
-                li.addEventListener("mouseover", () => li.style.background = "#f2f2f2");
-                li.addEventListener("mouseout", () => li.style.background = "white");
+                const plakaSpan = document.createElement("span");
+                plakaSpan.className = "il-panel__plaka";
+                plakaSpan.textContent = plakaStr;
+
+                const adSpan = document.createElement("span");
+                adSpan.textContent = ilAd;
+
+                li.appendChild(plakaSpan);
+                li.appendChild(adSpan);
 
                 li.addEventListener("click", () => {
+                    document.querySelectorAll(".il-panel__item.is-selected").forEach(el => el.classList.remove("is-selected"));
+                    li.classList.add("is-selected");
+
                     if (ilListeExpand) ilListeExpand.collapse();
                     if (aktifHighlight) { aktifHighlight.remove(); aktifHighlight = null; }
 
@@ -372,7 +394,7 @@
     view.ui.add(searchWidget, "top-right");
 
     // =========================================================
-    // TESİS SEMBOLÜ RENK HARİTASI VE GRAFİK EKLEME
+    // TESİS SEMBOLÜ RENK HARİTASI, ROZET BİLGİSİ VE POPUP ŞABLONU
     // =========================================================
     function tesisRengiGetir(tur) {
         switch ((tur || "").toUpperCase()) {
@@ -383,6 +405,54 @@
             default: return [156, 39, 176];
         }
     }
+
+    // Popup rozetinde kullanılacak class + etiket eşlemesi (marker rengiyle birebir uyumlu)
+    function tesisTipBilgisi(tur) {
+        const anahtar = (tur || "").toUpperCase();
+        const tablo = {
+            "GES": { sinif: "badge-ges", etiket: "GES · Güneş" },
+            "RES": { sinif: "badge-res", etiket: "RES · Rüzgar" },
+            "HES": { sinif: "badge-hes", etiket: "HES · Hidroelektrik" },
+            "TERMİK": { sinif: "badge-termik", etiket: "Termik" }
+        };
+        return tablo[anahtar] || { sinif: "badge-diger", etiket: anahtar || "Diğer" };
+    }
+
+    const tesisPopupTemplate = {
+        title: function (target) {
+            const a = (target.graphic && target.graphic.attributes) || {};
+            return a.tesisAdi || a.TesisAdi || "Tesis";
+        },
+        content: function (target) {
+            const a = (target.graphic && target.graphic.attributes) || {};
+            const tur = a.tesisTuru || a.TesisTuru || "";
+            const bilgi = tesisTipBilgisi(tur);
+            const guc = a.kuruluGuc || a.KuruluGuc;
+            const il = a.ilAdi || a.IlAdi || "--";
+            const enlemVal = a.enlem || a.Enlem;
+            const boylamVal = a.boylam || a.Boylam;
+            const enlem = typeof enlemVal === "number" ? enlemVal.toFixed(4) : (enlemVal || "--");
+            const boylam = typeof boylamVal === "number" ? boylamVal.toFixed(4) : (boylamVal || "--");
+
+            return `
+                <div class="popup-card">
+                    <span class="popup-badge ${bilgi.sinif}">${bilgi.etiket}</span>
+                    <div class="popup-row">
+                        <span class="popup-row__label">Kurulu Güç</span>
+                        <span class="popup-row__value">${guc !== undefined && guc !== null ? guc : "--"} MW</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="popup-row__label">İl</span>
+                        <span class="popup-row__value">${il}</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="popup-row__label">Koordinat</span>
+                        <span class="popup-row__value">${enlem}, ${boylam}</span>
+                    </div>
+                </div>
+            `;
+        }
+    };
 
     function haritayaTesisEkleGraphic(tesis) {
         const point = new Point({
@@ -402,15 +472,7 @@
             geometry: point,
             symbol: markerSymbol,
             attributes: tesis,
-            popupTemplate: {
-                title: "Tesis: {tesisAdi}",
-                content: `
-                    <b>Tür:</b> {tesisTuru}<br/>
-                    <b>Kurulu Güç:</b> {kuruluGuc} MW<br/>
-                    <b>İl:</b> {ilAdi}<br/>
-                    <b>Koordinat:</b> {enlem}, {boylam}
-                `
-            }
+            popupTemplate: tesisPopupTemplate
         });
 
         tesislerGraphicsLayer.add(graphic);
@@ -428,55 +490,68 @@
     }
 
     // =========================================================
-    // TESİS EKLEME BUTONU VE MODAL FORM MANTIĞI
+    // TESİS EKLEME BUTONU (FAB) VE MODAL FORM MANTIĞI
+    // Tüm görsel yapı map.css'teki .fab-add-tesis / .tesis-modal /
+    // .form-* / .tesis-type-pill class'larıyla sağlanır.
     // =========================================================
     let tesisEklemeModuAktif = false;
     let mapClickHandle = null;
+    let selectedTesisTuru = "GES";
 
     const tesisEkleBtn = document.createElement("button");
-    tesisEkleBtn.className = "esri-widget--button esri-widget esri-interactive";
+    tesisEkleBtn.className = "fab-add-tesis";
     tesisEkleBtn.title = "Haritadan Yeni Tesis Ekle";
-    tesisEkleBtn.innerHTML = "<span class='esri-icon-plus'></span>";
-    tesisEkleBtn.style.cssText = "background-color: #2e7d32; color: white; border-radius: 2px;";
+    tesisEkleBtn.innerHTML = '<span class="fab-add-tesis__icon" aria-hidden="true">+</span>';
 
-    view.ui.add(tesisEkleBtn, "top-left");
+    // esri'nin view.ui köşe sistemi yerine doğrudan sayfaya ekliyoruz;
+    // o köşe attribution/logo çubuğuyla dolu ve esri widget class'ları
+    // olmadan eklenen düz bir buton orada güvenilir şekilde görünmüyor.
+    document.body.appendChild(tesisEkleBtn);
 
     const modalHtml = `
-        <div id="tesisModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; font-family:sans-serif;">
-            <div style="background:white; padding:20px; border-radius:8px; width:340px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
-                <h3 style="margin-top:0; font-size:16px; color:#333; border-bottom:1px solid #ddd; padding-bottom:8px;">Yeni Tesis Kaydı</h3>
-                
-                <label style="font-size:12px; font-weight:bold; display:block; margin-top:10px;">Tesis Adı:</label>
-                <input type="text" id="modalTesisAdi" style="width:100%; padding:6px; margin-top:3px; box-sizing:border-box;" placeholder="Örn: Atatürk HES" />
+        <div id="tesisModal" class="tesis-modal">
+            <div class="tesis-modal__card">
+                <h3 class="tesis-modal__title">Yeni Tesis Kaydı</h3>
 
-                <label style="font-size:12px; font-weight:bold; display:block; margin-top:10px;">Tesis Türü:</label>
-                <select id="modalTesisTuru" style="width:100%; padding:6px; margin-top:3px; box-sizing:border-box;">
-                    <option value="GES">GES (Güneş Enerjisi)</option>
-                    <option value="RES">RES (Rüzgar Enerjisi)</option>
-                    <option value="HES">HES (Hidroelektrik)</option>
-                    <option value="TERMİK">TERMİK</option>
-                </select>
+                <div class="form-field">
+                    <label class="form-label" for="modalTesisAdi">Tesis Adı</label>
+                    <input type="text" id="modalTesisAdi" class="form-input" placeholder="Örn: Atatürk HES" />
+                </div>
 
-                <label style="font-size:12px; font-weight:bold; display:block; margin-top:10px;">Kurulu Güç (MW):</label>
-                <input type="number" step="0.01" id="modalKuruluGuc" style="width:100%; padding:6px; margin-top:3px; box-sizing:border-box;" placeholder="Örn: 50.5" />
-
-                <label style="font-size:12px; font-weight:bold; display:block; margin-top:10px;">İl:</label>
-                <select id="modalIlAdi" style="width:100%; padding:6px; margin-top:3px; box-sizing:border-box;"></select>
-
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <div style="flex:1;">
-                        <label style="font-size:11px; font-weight:bold;">Enlem:</label>
-                        <input type="text" id="modalEnlem" readonly style="width:100%; padding:5px; background:#eee; border:1px solid #ccc; font-size:11px;" />
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:11px; font-weight:bold;">Boylam:</label>
-                        <input type="text" id="modalBoylam" readonly style="width:100%; padding:5px; background:#eee; border:1px solid #ccc; font-size:11px;" />
+                <div class="form-field">
+                    <label class="form-label">Tesis Türü</label>
+                    <div class="tesis-type-pills" id="modalTesisTuruPills">
+                        <button type="button" class="tesis-type-pill pill-ges" data-value="GES">GES</button>
+                        <button type="button" class="tesis-type-pill pill-res" data-value="RES">RES</button>
+                        <button type="button" class="tesis-type-pill pill-hes" data-value="HES">HES</button>
+                        <button type="button" class="tesis-type-pill pill-termik" data-value="TERMİK">Termik</button>
                     </div>
                 </div>
 
-                <div style="margin-top:18px; text-align:right;">
-                    <button id="modalIptalBtn" style="padding:7px 14px; background:#757575; color:white; border:none; border-radius:4px; cursor:pointer; margin-right:5px;">İptal</button>
-                    <button id="modalKaydetBtn" style="padding:7px 14px; background:#1976d2; color:white; border:none; border-radius:4px; cursor:pointer;">Kaydet</button>
+                <div class="form-field">
+                    <label class="form-label" for="modalKuruluGuc">Kurulu Güç (MW)</label>
+                    <input type="number" step="0.01" id="modalKuruluGuc" class="form-input" placeholder="Örn: 50.5" />
+                </div>
+
+                <div class="form-field">
+                    <label class="form-label" for="modalIlAdi">İl</label>
+                    <select id="modalIlAdi" class="form-select"></select>
+                </div>
+
+                <div class="form-row form-field">
+                    <div class="form-field">
+                        <label class="form-label">Enlem</label>
+                        <input type="text" id="modalEnlem" class="form-input" readonly />
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Boylam</label>
+                        <input type="text" id="modalBoylam" class="form-input" readonly />
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="modalIptalBtn" class="btn btn-ghost">İptal</button>
+                    <button type="button" id="modalKaydetBtn" class="btn btn-primary">Kaydet</button>
                 </div>
             </div>
         </div>
@@ -487,11 +562,25 @@
     const modal = document.getElementById("tesisModal");
     const selectIl = document.getElementById("modalIlAdi");
 
+    function pilSecimGuncelle(tur) {
+        selectedTesisTuru = tur;
+        document.querySelectorAll(".tesis-type-pill").forEach(function (p) {
+            p.classList.toggle("is-selected", p.dataset.value === tur);
+        });
+    }
+
+    document.querySelectorAll(".tesis-type-pill").forEach(function (pill) {
+        pill.addEventListener("click", function () {
+            pilSecimGuncelle(pill.dataset.value);
+        });
+    });
+
     tesisEkleBtn.addEventListener("click", () => {
         tesisEklemeModuAktif = !tesisEklemeModuAktif;
 
         if (tesisEklemeModuAktif) {
-            tesisEkleBtn.style.backgroundColor = "#d32f2f";
+            tesisEkleBtn.classList.add("is-active");
+            tesisEkleBtn.title = "İptal etmek için tekrar tıklayın";
 
             mapClickHandle = view.on("click", (evt) => {
                 evt.stopPropagation();
@@ -503,6 +592,7 @@
                 document.getElementById("modalBoylam").value = lon;
                 document.getElementById("modalTesisAdi").value = "";
                 document.getElementById("modalKuruluGuc").value = "";
+                pilSecimGuncelle("GES");
 
                 selectIl.innerHTML = "";
                 illerListesi.forEach(il => {
@@ -513,26 +603,28 @@
                     selectIl.appendChild(opt);
                 });
 
-                modal.style.display = "flex";
+                modal.classList.add("is-open");
 
                 tesisEklemeModuAktif = false;
-                tesisEkleBtn.style.backgroundColor = "#2e7d32";
+                tesisEkleBtn.classList.remove("is-active");
+                tesisEkleBtn.title = "Haritadan Yeni Tesis Ekle";
                 if (mapClickHandle) mapClickHandle.remove();
             });
         } else {
-            tesisEkleBtn.style.backgroundColor = "#2e7d32";
+            tesisEkleBtn.classList.remove("is-active");
+            tesisEkleBtn.title = "Haritadan Yeni Tesis Ekle";
             if (mapClickHandle) mapClickHandle.remove();
         }
     });
 
     document.getElementById("modalIptalBtn").addEventListener("click", () => {
-        modal.style.display = "none";
+        modal.classList.remove("is-open");
     });
 
     document.getElementById("modalKaydetBtn").addEventListener("click", () => {
         const yeniTesis = {
             TesisAdi: document.getElementById("modalTesisAdi").value.trim(),
-            TesisTuru: document.getElementById("modalTesisTuru").value,
+            TesisTuru: selectedTesisTuru,
             KuruluGuc: parseFloat(document.getElementById("modalKuruluGuc").value) || 0,
             IlAdi: document.getElementById("modalIlAdi").value,
             Enlem: parseFloat(document.getElementById("modalEnlem").value),
@@ -553,7 +645,7 @@
                 throw new Error("Sunucu hatası");
             })
             .then(kaydedilenTesis => {
-                modal.style.display = "none";
+                modal.classList.remove("is-open");
 
                 haritayaTesisEkleGraphic({
                     tesisAdi: kaydedilenTesis.tesisAdi || yeniTesis.TesisAdi,

@@ -1,11 +1,11 @@
-﻿
- html, body{
+﻿html, body {
     margin: 0;
     padding: 0;
     height: 100%;
     width: 100%;
     overflow: hidden;
 }
+
 /* Harita kutusunun yükseklik kaybetmesini kesin olarak engeller */
 #viewDiv {
     padding: 0;
@@ -15,4 +15,518 @@
     position: relative;
 }
 
- 
+/* =========================================================
+   TÜRKİYE ENERJİ HARİTASI — ARAYÜZ STİLLERİ
+   Tasarım dili: esri "light" temasının üzerine, tek vurgu
+   rengi (şebeke yeşili) ve enerji türü paletiyle uyumlu
+   rozetler/pil'ler. Buradaki her class, map.js içindeki
+   ilgili elemente className/classList ile bağlanır.
+   ========================================================= */
+
+:root {
+    --ink: #10161c;
+    --slate: #4b5563;
+    --muted: #8a94a0;
+    --paper: #ffffff;
+    --mist: #f4f6f8;
+    --line: #e3e7eb;
+    --volt: #12967a; /* birincil vurgu — şebeke yeşili */
+    --volt-dark: #0d7a63;
+    --spark: #e8a33d; /* ikincil vurgu — güneş/enerji tonu */
+    --ember: #d64545; /* yalnızca imza şeridi ve aktif/iptal durumunda */
+    
+    /* Tesis türü renkleri — tesisRengiGetir() içindeki RGB
+       değerleriyle birebir eşleşir, marker ve rozet aynı rengi taşır */
+    --c-ges: #ffd700;
+    --c-res: #00bcd4;
+    --c-hes: #2196f3;
+    --c-termik: #f44336;
+    --c-diger: #9c27b0;
+    
+    --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+    --font-body: "Inter", "Segoe UI", sans-serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow-soft: 0 1px 2px rgba(16, 22, 28, 0.06), 0 8px 24px rgba(16, 22, 28, 0.12);
+    --shadow-lift: 0 2px 4px rgba(16, 22, 28, 0.08), 0 14px 32px rgba(16, 22, 28, 0.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+*:focus-visible {
+    outline: 2px solid var(--volt);
+    outline-offset: 2px;
+}
+
+/* ---------- Harita yüzeyi ---------- */
+.map-view {
+    height: 100vh;
+    width: 100vw;
+}
+
+/* ---------- Koordinat rozeti ---------- */
+.coord-badge {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    z-index: 99;
+    background: var(--paper);
+    color: var(--ink);
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid var(--line);
+}
+
+/* =========================================================
+   FAB — TESİS EKLEME BUTONU
+   ========================================================= */
+.fab-add-tesis {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 998;
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 50%;
+    background: var(--volt);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: var(--shadow-lift);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.fab-add-tesis:hover {
+    transform: translateY(-1px);
+    background: var(--volt-dark);
+}
+
+.fab-add-tesis:active {
+    transform: translateY(0);
+}
+
+.fab-add-tesis.is-active {
+    background: var(--ember);
+}
+
+.fab-add-tesis.is-active::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid var(--ember);
+    animation: fab-pulse 1.4s ease-out infinite;
+}
+
+@keyframes fab-pulse {
+    0% {
+        transform: scale(0.85);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(1.35);
+        opacity: 0;
+    }
+}
+
+.fab-add-tesis__icon {
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.fab-add-tesis.is-active .fab-add-tesis__icon {
+    transform: rotate(45deg);
+}
+
+/* =========================================================
+   MODAL — YENİ TESİS FORMU
+   ========================================================= */
+.tesis-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(16, 22, 28, 0.45);
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+}
+
+.tesis-modal.is-open {
+    display: flex;
+}
+
+.tesis-modal__card {
+    position: relative;
+    background: var(--paper);
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lift);
+    padding: 22px 22px 18px;
+    animation: modal-in 0.18s ease-out;
+}
+
+@keyframes modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.tesis-modal__card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: linear-gradient(90deg, var(--volt) 0%, var(--spark) 55%, var(--ember) 100%);
+}
+
+.tesis-modal__title {
+    margin: 4px 0 18px;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+}
+
+.form-field {
+    margin-top: 14px;
+}
+
+.form-label {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--slate);
+    margin-bottom: 6px;
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 10px;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    color: var(--ink);
+    background: var(--mist);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+    background: var(--paper);
+    border-color: var(--volt);
+}
+
+.form-input[readonly] {
+    color: var(--muted);
+    cursor: default;
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.form-row .form-field {
+    flex: 1;
+    margin-top: 0;
+}
+
+.tesis-type-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.tesis-type-pill {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--slate);
+    background: var(--mist);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.tesis-type-pill:hover {
+    border-color: var(--muted);
+}
+
+.tesis-type-pill::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dot-color, var(--muted));
+    flex-shrink: 0;
+}
+
+.tesis-type-pill.pill-ges { --dot-color: var(--c-ges); }
+.tesis-type-pill.pill-res { --dot-color: var(--c-res); }
+.tesis-type-pill.pill-hes { --dot-color: var(--c-hes); }
+.tesis-type-pill.pill-termik { --dot-color: var(--c-termik); }
+
+.tesis-type-pill.is-selected {
+    color: var(--ink);
+    background: var(--paper);
+    border-color: var(--ink);
+    font-weight: 600;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 8px 16px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: transform 0.12s ease, background-color 0.15s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background: var(--volt);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: var(--volt-dark);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--slate);
+}
+
+.btn-ghost:hover {
+    background: var(--mist);
+}
+
+/* =========================================================
+   İL LİSTESİ PANELİ
+   ========================================================= */
+.il-panel {
+    background: var(--paper);
+    width: 240px;
+    max-height: 420px;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-body);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.il-panel__header {
+    padding: 12px 14px 10px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line);
+}
+
+.il-panel__list {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    overflow-y: auto;
+}
+
+.il-panel__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--ink);
+    transition: background-color 0.12s ease;
+}
+
+.il-panel__item:hover {
+    background: var(--mist);
+}
+
+.il-panel__item.is-selected {
+    background: rgba(18, 150, 122, 0.1);
+    color: var(--volt-dark);
+    font-weight: 600;
+}
+
+.il-panel__plaka {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--paper);
+    background: var(--slate);
+    padding: 2px 6px;
+    border-radius: 999px;
+    min-width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.il-panel__item.is-selected .il-panel__plaka {
+    background: var(--volt);
+}
+
+/* =========================================================
+   POPUP İÇERİKLERİ (İl & Tesis)
+   ========================================================= */
+.popup-card {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    min-width: 200px;
+}
+
+.popup-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.popup-row:last-child {
+    border-bottom: none;
+}
+
+.popup-row__label {
+    color: var(--slate);
+    font-size: 12px;
+}
+
+.popup-row__value {
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.popup-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+    color: #fff;
+}
+
+.popup-badge::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    opacity: 0.85;
+}
+
+.popup-badge--plaka { background: var(--ink); }
+.badge-ges { background: var(--c-ges); color: #4a3b00; }
+.badge-res { background: var(--c-res); }
+.badge-hes { background: var(--c-hes); }
+.badge-termik { background: var(--c-termik); }
+.badge-diger { background: var(--c-diger); }
+
+/* Pop-up Silme Aksiyon Alanı Stilleri */
+.popup-actions {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-tesis-sil {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(214, 69, 69, 0.08);
+    color: var(--ember);
+    border: 1px solid rgba(214, 69, 69, 0.25);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+
+.btn-tesis-sil:hover {
+    background: var(--ember);
+    color: #ffffff;
+    border-color: var(--ember);
+    transform: translateY(-1px);
+}
+
+.btn-tesis-sil:active {
+    transform: translateY(0);
+}
+
+/* esri popup çerçevesini yumuşat */
+.esri-popup__main-container {
+    border-radius: var(--radius) !important;
+    box-shadow: var(--shadow-lift) !important;
+}

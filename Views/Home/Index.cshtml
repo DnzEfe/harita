@@ -3,13 +3,8 @@
     Layout = "_Layout";
 }
 
-<div id="viewDiv" style="height:100vh; width:100vw;"></div>
-<div id="coordDiv" style="
-    position:absolute; bottom:10px; left:10px; z-index:99;
-    background:white; padding:6px 10px; border-radius:4px;
-    font-family:sans-serif; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,0.3);">
-    Koordinat: --
-</div>
+<div id="viewDiv" class="map-view"></div>
+<div id="coordDiv" class="coord-badge">Koordinat: --</div>
 
 @section Scripts {
     <script src="~/js/map.js"></script>

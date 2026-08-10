@@ -8,22 +8,25 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/turkiye_haritası.styles.css" asp-append-version="true" />
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+    <!-- map.css en sonda: yukarıdaki temaların üzerine yazar -->
+    <link rel="stylesheet" href="~/css/map.css" asp-append-version="true" />
 </head>
 <body>
 
-
-            @RenderBody()
-
-
+    @RenderBody()
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="https://js.arcgis.com/4.29/"></script>
     @await RenderSectionAsync("Scripts", required: false)
- 
 
 </body>
-<link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css"/>
-<link rel="stylesheet" href="~/css/map.css" />
-
+</html>
