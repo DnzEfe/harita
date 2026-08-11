@@ -1,6 +1,6 @@
 ﻿require([
     "esri/Map",
-    "esri/views/SceneView", // MapView yerine SceneView getirildi
+    "esri/views/SceneView",
     "esri/Graphic",
     "esri/geometry/Point",
     "esri/layers/GraphicsLayer",
@@ -14,6 +14,7 @@
 ], function (Map, SceneView, Graphic, Point, GraphicsLayer, GeoJSONLayer, FeatureLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
 
     let illerListesi = [];
+    let editingTesisId = null; // Düzenleme modunu takip eder (null = Yeni Kayıt)
 
     function trNormalize(str) {
         if (!str) return "";
@@ -84,7 +85,7 @@
         return match;
     }
 
-    // POP-UP ŞABLONU
+    // İL POP-UP ŞABLONU
     const ilPopupTemplate = {
         title: function (target) {
             const g = target.graphic;
@@ -176,23 +177,18 @@
         }
     };
 
-    // 3D HARİTA TANIMI (ground: "world-elevation" eklendi)
+    // 3D HARİTA TANIMI
     const map = new Map({
         basemap: "satellite",
-        ground: "world-elevation" // 3D Yükselti ve dağ/arazi yapısını aktifleştirir
+        ground: "world-elevation"
     });
 
-    // 3D GÖRÜNÜM (SceneView eklendi)
     const view = new SceneView({
         container: "viewDiv",
         map: map,
         camera: {
-            position: {
-                x: 35.2433,
-                y: 35.0000,
-                z: 700000 // Yükseklik (Metre)
-            },
-            tilt: 45, // 3D Açısı (Derece)
+            position: { x: 35.2433, y: 35.0000, z: 700000 },
+            tilt: 45,
             heading: 0
         },
         highlightOptions: {
@@ -377,7 +373,6 @@
                             });
                         }
 
-                        // 3D Kameraya göre yumuşak yaklaşma
                         view.goTo({ target: targetGeometry, heading: 0, tilt: 50 }, { duration: 1000 }).then(() => {
                             view.popup.open({
                                 features: [feature],
@@ -421,6 +416,7 @@
         return tablo[anahtar] || { sinif: "badge-diger", etiket: anahtar || "Diğer" };
     }
 
+    // TESİS POP-UP ŞABLONU (DOM ELEMENTİ İLE DÜZENLE VE SİL BUTONU)
     const tesisPopupTemplate = {
         title: function (target) {
             const a = (target.graphic && target.graphic.attributes) || {};
@@ -428,39 +424,57 @@
         },
         content: function (target) {
             const a = (target.graphic && target.graphic.attributes) || {};
+            const id = a.id || a.Id;
             const tur = a.tesisTuru || a.TesisTuru || "";
             const bilgi = tesisTipBilgisi(tur);
-            const guc = a.kuruluGuc || a.KuruluGuc;
+            const guc = a.kuruluGuc !== undefined ? a.kuruluGuc : a.KuruluGuc;
             const il = a.ilAdi || a.IlAdi || "--";
-            const enlemVal = a.enlem || a.Enlem;
-            const boylamVal = a.boylam || a.Boylam;
+            const enlemVal = a.enlem !== undefined ? a.enlem : a.Enlem;
+            const boylamVal = a.boylam !== undefined ? a.boylam : a.Boylam;
             const enlem = typeof enlemVal === "number" ? enlemVal.toFixed(4) : (enlemVal || "--");
             const boylam = typeof boylamVal === "number" ? boylamVal.toFixed(4) : (boylamVal || "--");
 
-            return `
-                <div class="popup-card">
-                    <span class="popup-badge ${bilgi.sinif}">${bilgi.etiket}</span>
-                    <div class="popup-row">
-                        <span class="popup-row__label">Kurulu Güç</span>
-                        <span class="popup-row__value">${guc !== undefined && guc !== null ? guc : "--"} MW</span>
-                    </div>
-                    <div class="popup-row">
-                        <span class="popup-row__label">İl</span>
-                        <span class="popup-row__value">${il}</span>
-                    </div>
-                    <div class="popup-row">
-                        <span class="popup-row__label">Koordinat</span>
-                        <span class="popup-row__value">${enlem}, ${boylam}</span>
-                    </div>
+            // ArcGIS inline "onclick"leri sildiği için DOM elementi üzerinden dinleyici bağlıyoruz
+            const container = document.createElement("div");
+            container.className = "popup-card";
+            container.innerHTML = `
+                <span class="popup-badge ${bilgi.sinif}">${bilgi.etiket}</span>
+                <div class="popup-row">
+                    <span class="popup-row__label">Kurulu Güç</span>
+                    <span class="popup-row__value">${guc !== undefined && guc !== null ? guc : "--"} MW</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-row__label">İl</span>
+                    <span class="popup-row__value">${il}</span>
+                </div>
+                <div class="popup-row">
+                    <span class="popup-row__label">Koordinat</span>
+                    <span class="popup-row__value">${enlem}, ${boylam}</span>
+                </div>
+                <div class="popup-actions">
+                    <button type="button" class="btn-tesis-duzenle">✏️ Düzenle</button>
+                    <button type="button" class="btn-tesis-sil">🗑️ Sil</button>
                 </div>
             `;
+
+            const btnDuzenle = container.querySelector(".btn-tesis-duzenle");
+            const btnSil = container.querySelector(".btn-tesis-sil");
+
+            if (btnDuzenle) {
+                btnDuzenle.addEventListener("click", () => window.tesisDuzenle(id));
+            }
+            if (btnSil) {
+                btnSil.addEventListener("click", () => window.tesisSil(id));
+            }
+
+            return container;
         }
     };
 
     function haritayaTesisEkleGraphic(tesis) {
         const point = new Point({
-            longitude: tesis.boylam || tesis.Boylam,
-            latitude: tesis.enlem || tesis.Enlem,
+            longitude: tesis.boylam !== undefined ? tesis.boylam : tesis.Boylam,
+            latitude: tesis.enlem !== undefined ? tesis.enlem : tesis.Enlem,
             spatialReference: { wkid: 4326 }
         });
 
@@ -482,6 +496,7 @@
     }
 
     function mevcutTesisleriYukle() {
+        tesislerGraphicsLayer.removeAll();
         fetch("/Home/Tesisler")
             .then(res => res.json())
             .then(data => {
@@ -491,6 +506,80 @@
             })
             .catch(err => console.error("Tesisler çekilirken hata:", err));
     }
+
+    // KÜRESEL DÜZENLEME VE SİLME FONKSİYONLARI (WINDOW BINDING)
+    window.tesisSil = function (id) {
+        if (!id) {
+            alert("Tesis ID'si bulunamadı.");
+            return;
+        }
+        if (confirm("Bu tesisi silmek istediğinize emin misiniz?")) {
+            fetch("/Home/TesisSil", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(id)
+            })
+                .then(res => {
+                    if (res.ok) {
+                        view.popup.close();
+                        const graphicToRemove = tesislerGraphicsLayer.graphics.find(g => {
+                            const attrId = g.attributes.id || g.attributes.Id;
+                            return attrId == id;
+                        });
+                        if (graphicToRemove) {
+                            tesislerGraphicsLayer.remove(graphicToRemove);
+                        }
+                    } else {
+                        alert("Silme işlemi başarısız oldu.");
+                    }
+                })
+                .catch(err => console.error("Silme hatası:", err));
+        }
+    };
+
+    window.tesisDuzenle = function (id) {
+        if (!id) {
+            alert("Tesis ID'si bulunamadı.");
+            return;
+        }
+
+        const graphicToEdit = tesislerGraphicsLayer.graphics.find(g => {
+            const attrId = g.attributes.id || g.attributes.Id;
+            return attrId == id;
+        });
+
+        if (!graphicToEdit) return;
+
+        const attr = graphicToEdit.attributes;
+        editingTesisId = id;
+
+        // Form alanlarını doldur
+        document.getElementById("modalTesisAdi").value = attr.tesisAdi || attr.TesisAdi || "";
+        document.getElementById("modalKuruluGuc").value = attr.kuruluGuc !== undefined ? attr.kuruluGuc : attr.KuruluGuc;
+        document.getElementById("modalEnlem").value = attr.enlem !== undefined ? attr.enlem : attr.Enlem;
+        document.getElementById("modalBoylam").value = attr.boylam !== undefined ? attr.boylam : attr.Boylam;
+
+        pilSecimGuncelle(attr.tesisTuru || attr.TesisTuru || "GES");
+
+        // İl Seçeneğini Seçili Getir
+        selectIl.innerHTML = "";
+        illerListesi.forEach(il => {
+            const ad = il.ad || il.adi || il.il_adi || il.ilAdi || il.name;
+            const opt = document.createElement("option");
+            opt.value = ad;
+            opt.textContent = ad;
+            if (ad === (attr.ilAdi || attr.IlAdi)) {
+                opt.selected = true;
+            }
+            selectIl.appendChild(opt);
+        });
+
+        document.querySelector(".tesis-modal__title").textContent = "Tesis Bilgilerini Düzenle";
+        document.getElementById("modalKaydetBtn").textContent = "Güncelle";
+
+        modal.classList.add("is-open");
+        view.popup.close();
+    };
 
     // TESİS EKLEME MODAL VE FAB
     let tesisEklemeModuAktif = false;
@@ -572,6 +661,10 @@
     });
 
     tesisEkleBtn.addEventListener("click", () => {
+        editingTesisId = null;
+        document.querySelector(".tesis-modal__title").textContent = "Yeni Tesis Kaydı";
+        document.getElementById("modalKaydetBtn").textContent = "Kaydet";
+
         tesisEklemeModuAktif = !tesisEklemeModuAktif;
 
         if (tesisEklemeModuAktif) {
@@ -615,10 +708,12 @@
 
     document.getElementById("modalIptalBtn").addEventListener("click", () => {
         modal.classList.remove("is-open");
+        editingTesisId = null;
     });
 
+    // KAYDET VEYA GÜNCELLE BUTON AKSİYONU
     document.getElementById("modalKaydetBtn").addEventListener("click", () => {
-        const yeniTesis = {
+        const tesisData = {
             TesisAdi: document.getElementById("modalTesisAdi").value.trim(),
             TesisTuru: selectedTesisTuru,
             KuruluGuc: parseFloat(document.getElementById("modalKuruluGuc").value) || 0,
@@ -627,33 +722,47 @@
             Boylam: parseFloat(document.getElementById("modalBoylam").value)
         };
 
-        if (!yeniTesis.TesisAdi) {
+        if (!tesisData.TesisAdi) {
+            alert("Lütfen bir tesis adı giriniz.");
             return;
         }
 
-        fetch("/Home/TesisEkle", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(yeniTesis)
-        })
-            .then(res => {
-                if (res.ok) return res.json();
-                throw new Error("Sunucu hatası");
-            })
-            .then(kaydedilenTesis => {
-                modal.classList.remove("is-open");
+        if (editingTesisId) {
+            // DÜZENLEME MODU (GÜNCELLEME)
+            tesisData.Id = editingTesisId;
 
-                haritayaTesisEkleGraphic({
-                    tesisAdi: kaydedilenTesis.tesisAdi || yeniTesis.TesisAdi,
-                    tesisTuru: kaydedilenTesis.tesisTuru || yeniTesis.TesisTuru,
-                    kuruluGuc: kaydedilenTesis.kuruluGuc || yeniTesis.KuruluGuc,
-                    ilAdi: kaydedilenTesis.ilAdi || yeniTesis.IlAdi,
-                    enlem: kaydedilenTesis.enlem || yeniTesis.Enlem,
-                    boylam: kaydedilenTesis.boylam || yeniTesis.Boylam
-                });
+            fetch("/Home/TesisGuncelle", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(tesisData)
             })
-            .catch(err => {
-                console.error("Kayıt hatası:", err);
-            });
+                .then(res => {
+                    if (res.ok) return res.json();
+                    throw new Error("Güncelleme hatası");
+                })
+                .then(guncellenenTesis => {
+                    modal.classList.remove("is-open");
+                    editingTesisId = null;
+                    mevcutTesisleriYukle();
+                })
+                .catch(err => console.error("Güncelleme hatası:", err));
+
+        } else {
+            // YENİ EKLEME MODU
+            fetch("/Home/TesisEkle", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(tesisData)
+            })
+                .then(res => {
+                    if (res.ok) return res.json();
+                    throw new Error("Sunucu hatası");
+                })
+                .then(kaydedilenTesis => {
+                    modal.classList.remove("is-open");
+                    haritayaTesisEkleGraphic(kaydedilenTesis);
+                })
+                .catch(err => console.error("Kayıt hatası:", err));
+        }
     });
 });

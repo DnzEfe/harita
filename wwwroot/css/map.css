@@ -6,22 +6,13 @@
     overflow: hidden;
 }
 
-/* Harita kutusunun yükseklik kaybetmesini kesin olarak engeller */
 #viewDiv {
     padding: 0;
     margin: 0;
     width: 100% !important;
-    height: 100vh !important; /* Yüksekliği ekranın tamamına sabitler */
+    height: 100vh !important;
     position: relative;
 }
-
-/* =========================================================
-   TÜRKİYE ENERJİ HARİTASI — ARAYÜZ STİLLERİ
-   Tasarım dili: esri "light" temasının üzerine, tek vurgu
-   rengi (şebeke yeşili) ve enerji türü paletiyle uyumlu
-   rozetler/pil'ler. Buradaki her class, map.js içindeki
-   ilgili elemente className/classList ile bağlanır.
-   ========================================================= */
 
 :root {
     --ink: #10161c;
@@ -30,19 +21,15 @@
     --paper: #ffffff;
     --mist: #f4f6f8;
     --line: #e3e7eb;
-    --volt: #12967a; /* birincil vurgu — şebeke yeşili */
+    --volt: #12967a;
     --volt-dark: #0d7a63;
-    --spark: #e8a33d; /* ikincil vurgu — güneş/enerji tonu */
-    --ember: #d64545; /* yalnızca imza şeridi ve aktif/iptal durumunda */
-    
-    /* Tesis türü renkleri — tesisRengiGetir() içindeki RGB
-       değerleriyle birebir eşleşir, marker ve rozet aynı rengi taşır */
+    --spark: #e8a33d;
+    --ember: #d64545;
     --c-ges: #ffd700;
     --c-res: #00bcd4;
     --c-hes: #2196f3;
     --c-termik: #f44336;
     --c-diger: #9c27b0;
-    
     --font-display: "Space Grotesk", "Segoe UI", sans-serif;
     --font-body: "Inter", "Segoe UI", sans-serif;
     --radius: 12px;
@@ -63,13 +50,11 @@
     outline-offset: 2px;
 }
 
-/* ---------- Harita yüzeyi ---------- */
 .map-view {
     height: 100vh;
     width: 100vw;
 }
 
-/* ---------- Koordinat rozeti ---------- */
 .coord-badge {
     position: absolute;
     bottom: 14px;
@@ -86,9 +71,6 @@
     border: 1px solid var(--line);
 }
 
-/* =========================================================
-   FAB — TESİS EKLEME BUTONU
-   ========================================================= */
 .fab-add-tesis {
     position: fixed;
     right: 24px;
@@ -111,33 +93,34 @@
     transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
-.fab-add-tesis:hover {
-    transform: translateY(-1px);
-    background: var(--volt-dark);
-}
+    .fab-add-tesis:hover {
+        transform: translateY(-1px);
+        background: var(--volt-dark);
+    }
 
-.fab-add-tesis:active {
-    transform: translateY(0);
-}
+    .fab-add-tesis:active {
+        transform: translateY(0);
+    }
 
-.fab-add-tesis.is-active {
-    background: var(--ember);
-}
+    .fab-add-tesis.is-active {
+        background: var(--ember);
+    }
 
-.fab-add-tesis.is-active::after {
-    content: "";
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    border: 2px solid var(--ember);
-    animation: fab-pulse 1.4s ease-out infinite;
-}
+        .fab-add-tesis.is-active::after {
+            content: "";
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 2px solid var(--ember);
+            animation: fab-pulse 1.4s ease-out infinite;
+        }
 
 @keyframes fab-pulse {
     0% {
         transform: scale(0.85);
         opacity: 0.9;
     }
+
     100% {
         transform: scale(1.35);
         opacity: 0;
@@ -153,9 +136,6 @@
     transform: rotate(45deg);
 }
 
-/* =========================================================
-   MODAL — YENİ TESİS FORMU
-   ========================================================= */
 .tesis-modal {
     display: none;
     position: fixed;
@@ -167,9 +147,9 @@
     font-family: var(--font-body);
 }
 
-.tesis-modal.is-open {
-    display: flex;
-}
+    .tesis-modal.is-open {
+        display: flex;
+    }
 
 .tesis-modal__card {
     position: relative;
@@ -189,6 +169,7 @@
         opacity: 0;
         transform: translateY(6px) scale(0.98);
     }
+
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -244,26 +225,26 @@
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.form-input:focus,
-.form-select:focus {
-    background: var(--paper);
-    border-color: var(--volt);
-}
+    .form-input:focus,
+    .form-select:focus {
+        background: var(--paper);
+        border-color: var(--volt);
+    }
 
-.form-input[readonly] {
-    color: var(--muted);
-    cursor: default;
-}
+    .form-input[readonly] {
+        color: var(--muted);
+        cursor: default;
+    }
 
 .form-row {
     display: flex;
     gap: 10px;
 }
 
-.form-row .form-field {
-    flex: 1;
-    margin-top: 0;
-}
+    .form-row .form-field {
+        flex: 1;
+        margin-top: 0;
+    }
 
 .tesis-type-pills {
     display: flex;
@@ -289,30 +270,41 @@
     transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
-.tesis-type-pill:hover {
-    border-color: var(--muted);
-}
+    .tesis-type-pill:hover {
+        border-color: var(--muted);
+    }
 
-.tesis-type-pill::before {
-    content: "";
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--dot-color, var(--muted));
-    flex-shrink: 0;
-}
+    .tesis-type-pill::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--dot-color, var(--muted));
+        flex-shrink: 0;
+    }
 
-.tesis-type-pill.pill-ges { --dot-color: var(--c-ges); }
-.tesis-type-pill.pill-res { --dot-color: var(--c-res); }
-.tesis-type-pill.pill-hes { --dot-color: var(--c-hes); }
-.tesis-type-pill.pill-termik { --dot-color: var(--c-termik); }
+    .tesis-type-pill.pill-ges {
+        --dot-color: var(--c-ges);
+    }
 
-.tesis-type-pill.is-selected {
-    color: var(--ink);
-    background: var(--paper);
-    border-color: var(--ink);
-    font-weight: 600;
-}
+    .tesis-type-pill.pill-res {
+        --dot-color: var(--c-res);
+    }
+
+    .tesis-type-pill.pill-hes {
+        --dot-color: var(--c-hes);
+    }
+
+    .tesis-type-pill.pill-termik {
+        --dot-color: var(--c-termik);
+    }
+
+    .tesis-type-pill.is-selected {
+        color: var(--ink);
+        background: var(--paper);
+        border-color: var(--ink);
+        font-weight: 600;
+    }
 
 .modal-actions {
     display: flex;
@@ -332,35 +324,32 @@
     transition: transform 0.12s ease, background-color 0.15s ease;
 }
 
-.btn:hover {
-    transform: translateY(-1px);
-}
+    .btn:hover {
+        transform: translateY(-1px);
+    }
 
-.btn:active {
-    transform: translateY(0);
-}
+    .btn:active {
+        transform: translateY(0);
+    }
 
 .btn-primary {
     background: var(--volt);
     color: #fff;
 }
 
-.btn-primary:hover {
-    background: var(--volt-dark);
-}
+    .btn-primary:hover {
+        background: var(--volt-dark);
+    }
 
 .btn-ghost {
     background: transparent;
     color: var(--slate);
 }
 
-.btn-ghost:hover {
-    background: var(--mist);
-}
+    .btn-ghost:hover {
+        background: var(--mist);
+    }
 
-/* =========================================================
-   İL LİSTESİ PANELİ
-   ========================================================= */
 .il-panel {
     background: var(--paper);
     width: 240px;
@@ -400,15 +389,15 @@
     transition: background-color 0.12s ease;
 }
 
-.il-panel__item:hover {
-    background: var(--mist);
-}
+    .il-panel__item:hover {
+        background: var(--mist);
+    }
 
-.il-panel__item.is-selected {
-    background: rgba(18, 150, 122, 0.1);
-    color: var(--volt-dark);
-    font-weight: 600;
-}
+    .il-panel__item.is-selected {
+        background: rgba(18, 150, 122, 0.1);
+        color: var(--volt-dark);
+        font-weight: 600;
+    }
 
 .il-panel__plaka {
     font-family: var(--font-display);
@@ -427,14 +416,11 @@
     background: var(--volt);
 }
 
-/* =========================================================
-   POPUP İÇERİKLERİ (İl & Tesis)
-   ========================================================= */
 .popup-card {
     font-family: var(--font-body);
     font-size: 13px;
     color: var(--ink);
-    min-width: 200px;
+    min-width: 210px;
 }
 
 .popup-row {
@@ -445,9 +431,9 @@
     border-bottom: 1px solid var(--line);
 }
 
-.popup-row:last-child {
-    border-bottom: none;
-}
+    .popup-row:last-child {
+        border-bottom: none;
+    }
 
 .popup-row__label {
     color: var(--slate);
@@ -473,59 +459,100 @@
     color: #fff;
 }
 
-.popup-badge::before {
-    content: "";
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #fff;
-    opacity: 0.85;
+    .popup-badge::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #fff;
+        opacity: 0.85;
+    }
+
+.popup-badge--plaka {
+    background: var(--ink);
 }
 
-.popup-badge--plaka { background: var(--ink); }
-.badge-ges { background: var(--c-ges); color: #4a3b00; }
-.badge-res { background: var(--c-res); }
-.badge-hes { background: var(--c-hes); }
-.badge-termik { background: var(--c-termik); }
-.badge-diger { background: var(--c-diger); }
+.badge-ges {
+    background: var(--c-ges);
+    color: #4a3b00;
+}
 
-/* Pop-up Silme Aksiyon Alanı Stilleri */
+.badge-res {
+    background: var(--c-res);
+}
+
+.badge-hes {
+    background: var(--c-hes);
+}
+
+.badge-termik {
+    background: var(--c-termik);
+}
+
+.badge-diger {
+    background: var(--c-diger);
+}
+
+/* Pop-up Buton Grubu */
 .popup-actions {
     margin-top: 12px;
     padding-top: 10px;
     border-top: 1px dashed var(--line);
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
 }
+
+.btn-tesis-duzenle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(18, 150, 122, 0.08);
+    color: var(--volt-dark);
+    border: 1px solid rgba(18, 150, 122, 0.3);
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+    .btn-tesis-duzenle:hover {
+        background: var(--volt);
+        color: #ffffff;
+        border-color: var(--volt);
+        transform: translateY(-1px);
+    }
 
 .btn-tesis-sil {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     background: rgba(214, 69, 69, 0.08);
     color: var(--ember);
     border: 1px solid rgba(214, 69, 69, 0.25);
-    padding: 6px 12px;
+    padding: 5px 10px;
     border-radius: var(--radius-sm);
     font-family: var(--font-body);
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+    transition: all 0.15s ease;
 }
 
-.btn-tesis-sil:hover {
-    background: var(--ember);
-    color: #ffffff;
-    border-color: var(--ember);
-    transform: translateY(-1px);
-}
+    .btn-tesis-sil:hover {
+        background: var(--ember);
+        color: #ffffff;
+        border-color: var(--ember);
+        transform: translateY(-1px);
+    }
 
-.btn-tesis-sil:active {
-    transform: translateY(0);
-}
+    .btn-tesis-sil:active, .btn-tesis-duzenle:active {
+        transform: translateY(0);
+    }
 
-/* esri popup çerçevesini yumuşat */
 .esri-popup__main-container {
     border-radius: var(--radius) !important;
     box-shadow: var(--shadow-lift) !important;

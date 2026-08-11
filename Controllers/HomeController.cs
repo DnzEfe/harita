@@ -11,7 +11,6 @@ namespace turkiye_haritası.Controllers
     {
         private readonly AppDbContext _context;
 
-        // Veritabanı bağlantısını Constructor üzerinden enjekte ediyoruz
         public HomeController(AppDbContext context)
         {
             _context = context;
@@ -35,7 +34,7 @@ namespace turkiye_haritası.Controllers
             return Json(liste);
         }
 
-        // 2. Harita Tıklamasıyla Gelen Yeni Tesisi PostgreSQL'e Kaydeden Endpoint
+        // 2. Yeni Tesisi PostgreSQL'e Kaydeden Endpoint
         [HttpPost]
         public IActionResult TesisEkle([FromBody] Tesis yeniTesis)
         {
@@ -44,19 +43,61 @@ namespace turkiye_haritası.Controllers
                 return BadRequest("Geçersiz veri.");
             }
 
-            // Kayıt tarihi belirtilmemişse otomatik güncel UTC zamanını atar
             if (yeniTesis.KayitTarihi == default)
             {
                 yeniTesis.KayitTarihi = DateTime.UtcNow;
             }
 
             _context.Tesisler.Add(yeniTesis);
-            _context.SaveChanges(); // Veritabanına fiziksel kaydı yapar
+            _context.SaveChanges();
 
             return Ok(yeniTesis);
         }
 
-        // 3. Mevcut İller Listesi
+        // 3. Tesisi PostgreSQL'den Silen Endpoint
+        [HttpPost]
+        public IActionResult TesisSil([FromBody] int id)
+        {
+            var tesis = _context.Tesisler.Find(id);
+            if (tesis == null)
+            {
+                return NotFound("Silinecek tesis bulunamadı.");
+            }
+
+            _context.Tesisler.Remove(tesis);
+            _context.SaveChanges();
+
+            return Ok(new { success = true, id = id });
+        }
+
+        // 4. Tesisi PostgreSQL'de Güncelleyen Endpoint
+        [HttpPost]
+        public IActionResult TesisGuncelle([FromBody] Tesis guncelTesis)
+        {
+            if (guncelTesis == null || guncelTesis.Id <= 0)
+            {
+                return BadRequest("Geçersiz tesis bilgisi.");
+            }
+
+            var mevcutTesis = _context.Tesisler.Find(guncelTesis.Id);
+            if (mevcutTesis == null)
+            {
+                return NotFound("Güncellenecek tesis bulunamadı.");
+            }
+
+            mevcutTesis.TesisAdi = guncelTesis.TesisAdi;
+            mevcutTesis.TesisTuru = guncelTesis.TesisTuru;
+            mevcutTesis.KuruluGuc = guncelTesis.KuruluGuc;
+            mevcutTesis.IlAdi = guncelTesis.IlAdi;
+            mevcutTesis.Enlem = guncelTesis.Enlem;
+            mevcutTesis.Boylam = guncelTesis.Boylam;
+
+            _context.SaveChanges();
+
+            return Ok(mevcutTesis);
+        }
+
+        // 5. Mevcut İller Listesi
         [HttpGet]
         public IActionResult Iller()
         {
