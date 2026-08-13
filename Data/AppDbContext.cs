@@ -14,7 +14,14 @@ namespace turkiye_haritası.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.Entity<Tesis>().ToTable("tesisler");
+
+            modelBuilder.Entity<Tesis>(entity =>
+            {
+                entity.ToTable("tesisler");
+
+                entity.Property(t => t.Konum)
+                      .HasColumnType("geometry (point, 4326)");
+            });
         }
     }
 }

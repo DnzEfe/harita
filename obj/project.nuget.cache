@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "zfsHhZPcxcY=",
+  "dgSpecHash": "QwjzoqssYxE=",
   "success": true,
   "projectFilePath": "C:\\Users\\USER\\source\\repos\\harita\\turkiye_haritası.csproj",
   "expectedPackageFiles": [
@@ -21,9 +21,13 @@
     "C:\\Users\\USER\\.nuget\\packages\\microsoft.extensions.dependencymodel\\10.0.10\\microsoft.extensions.dependencymodel.10.0.10.nupkg.sha512",
     "C:\\Users\\USER\\.nuget\\packages\\microsoft.visualstudio.solutionpersistence\\1.0.52\\microsoft.visualstudio.solutionpersistence.1.0.52.nupkg.sha512",
     "C:\\Users\\USER\\.nuget\\packages\\mono.texttemplating\\3.0.0\\mono.texttemplating.3.0.0.nupkg.sha512",
+    "C:\\Users\\USER\\.nuget\\packages\\nettopologysuite\\2.6.0\\nettopologysuite.2.6.0.nupkg.sha512",
+    "C:\\Users\\USER\\.nuget\\packages\\nettopologysuite.io.postgis\\2.1.0\\nettopologysuite.io.postgis.2.1.0.nupkg.sha512",
     "C:\\Users\\USER\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
     "C:\\Users\\USER\\.nuget\\packages\\npgsql\\10.0.3\\npgsql.10.0.3.nupkg.sha512",
     "C:\\Users\\USER\\.nuget\\packages\\npgsql.entityframeworkcore.postgresql\\10.0.3\\npgsql.entityframeworkcore.postgresql.10.0.3.nupkg.sha512",
+    "C:\\Users\\USER\\.nuget\\packages\\npgsql.entityframeworkcore.postgresql.nettopologysuite\\10.0.3\\npgsql.entityframeworkcore.postgresql.nettopologysuite.10.0.3.nupkg.sha512",
+    "C:\\Users\\USER\\.nuget\\packages\\npgsql.nettopologysuite\\10.0.3\\npgsql.nettopologysuite.10.0.3.nupkg.sha512",
     "C:\\Users\\USER\\.nuget\\packages\\system.codedom\\6.0.0\\system.codedom.6.0.0.nupkg.sha512",
     "C:\\Users\\USER\\.nuget\\packages\\system.composition\\9.0.0\\system.composition.9.0.0.nupkg.sha512",
     "C:\\Users\\USER\\.nuget\\packages\\system.composition.attributedmodel\\9.0.0\\system.composition.attributedmodel.9.0.0.nupkg.sha512",
