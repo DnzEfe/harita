@@ -948,6 +948,26 @@
             };
         });
 
+        // Bulunan tesislerin grafiklerini topluyoruz; bunları ArcGIS popup'ında
+        // (mevcut tesisPopupTemplate ile, ok tuşlarıyla gezinilebilir) gösteriyoruz.
+        const bulunanGraphics = tesislerGraphicsLayer.graphics.filter(g => {
+            const attrId = g.attributes.id !== undefined ? g.attributes.id : g.attributes.Id;
+            return bulunanIdSeti.has(attrId);
+        }).toArray();
+
+        if (bulunanGraphics.length > 0) {
+            view.popup.open({
+                features: bulunanGraphics,
+                location: merkez
+            });
+        } else {
+            view.popup.open({
+                title: "Sonuç Yok",
+                content: "Bu alanda kayıtlı tesis bulunamadı.",
+                location: merkez
+            });
+        }
+
         view.goTo(daire.extent.expand(1.4));
 
         aramaSonucVar = true;
@@ -989,6 +1009,7 @@
 
     function aramaTemizle() {
         aramaGraphicsLayer.removeAll();
+        view.popup.close();
         aramaSonucVar = false;
         secilenAramaNoktasi = null;
         aramaBtn.classList.remove("is-active");
