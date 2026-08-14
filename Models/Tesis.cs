@@ -1,13 +1,16 @@
-﻿namespace turkiye_haritası.Models // Kendi proje adını yaz
+﻿using NetTopologySuite.Geometries; // Bu kütüphaneyi eklemeyi unutma
+
+namespace turkiye_haritası.Models
 {
     public class Tesis
     {
-        public int Id { get; set; } // Primary Key (Otomatik artan ID)
+        public int Id { get; set; }
         public string TesisAdi { get; set; }
-        public string TesisTuru { get; set; } // HES, GES, RES, Termik
+        public string TesisTuru { get; set; }
         public double KuruluGuc { get; set; }
         public string Il { get; set; }
-        public double Enlem { get; set; }
-        public double Boylam { get; set; }
+
+        
+        public Point Konum { get; set; }
     }
 }

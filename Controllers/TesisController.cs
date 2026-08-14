@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 using System.Linq;
 
+using turkiye_haritası.DTOs;
 using turkiye_haritası.Models;
 
 namespace turkiye_haritası.Controllers
@@ -10,69 +13,75 @@ namespace turkiye_haritası.Controllers
     public class TesisController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IMapper _mapper; // YENİ: AutoMapper Motoru
 
-        public TesisController(AppDbContext context)
+        // Constructor'a IMapper'ı dahil ettik
+        public TesisController(AppDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
-        // 1. VERİTABANINDAN TESİSLERİ ÇEKME (GET)
+        // 1. GET: Dışarıya Model değil, DTO gönderiyoruz
         [HttpGet]
         public IActionResult TesisleriGetir()
         {
-            _context.Database.EnsureCreated();
+            var gercekTesisler = _context.Tesisler.ToList();
 
-            var tesisListesi = _context.Tesisler.ToList();
-            return Ok(tesisListesi);
+            // TEK SATIRDA ÇEVİRİ: Tesis listesini TesisDTO listesine kopyala
+            var tesisDtoListesi = _mapper.Map<List<TesisDTO>>(gercekTesisler);
+
+            return Ok(tesisDtoListesi);
         }
 
-        // 2. VERİTABANINA YENİ TESİS EKLEME (POST)
+        // 2. POST: Dışarıdan Model değil, DTO alıyoruz
         [HttpPost]
-        public IActionResult TesisEkle([FromBody] Tesis yeniTesis)
+        public IActionResult TesisEkle([FromBody] TesisDTO yeniTesisDTO)
         {
-            _context.Tesisler.Add(yeniTesis);
-            _context.SaveChanges();
+            // Gelen DTO'yu veritabanına kaydetmek için Model'e çeviriyoruz
+            var eklenecekTesis = _mapper.Map<Tesis>(yeniTesisDTO);
 
-            return Ok(yeniTesis);
+            _context.Tesisler.Add(eklenecekTesis);
+            _context.SaveChanges(); // ID burada oluştu
+
+            // Ön yüze cevap dönerken tekrar DTO'ya çeviriyoruz
+            var kaydedilenTesisDTO = _mapper.Map<TesisDTO>(eklenecekTesis);
+            return Ok(kaydedilenTesisDTO);
         }
 
-        // 3. VERİTABANINDAN TESİS SİLME (DELETE)
+        // 3. DELETE (Değişiklik yok)
         [HttpDelete("{id}")]
         public IActionResult TesisSil(int id)
         {
             var silinecekTesis = _context.Tesisler.Find(id);
-            if (silinecekTesis == null)
-            {
-                return NotFound("Tesis bulunamadı.");
-            }
+            if (silinecekTesis == null) return NotFound("Tesis bulunamadı.");
 
             _context.Tesisler.Remove(silinecekTesis);
             _context.SaveChanges();
-
-            return Ok(new { mesaj = "Tesis başarıyla silindi." });
+            return Ok(new { mesaj = "Tesis silindi." });
         }
 
-        // 4. VERİTABANINDA TESİS GÜNCELLEME (PUT) - İSTEDİĞİN SON DÜZENLEME KISMI
-        [HttpPut("{id}")]
-        public IActionResult TesisGuncelle(int id, [FromBody] Tesis guncelTesis)
+        // 4. PUT: Uzun uzun atama yapmak yerine AutoMapper kullanıyoruz
+        // TesisController.cs içine eklenecek
+
+        [HttpGet("analiz/yakindakiler")]
+        public IActionResult YakindakiTesisleriGetir(double enlem, double boylam, double mesafeKm)
         {
-            var mevcutTesis = _context.Tesisler.Find(id);
-            if (mevcutTesis == null)
-            {
-                return NotFound("Tesis bulunamadı.");
-            }
+            // GIS Mühendislik Notu: SRID 4326'da 1 derece yaklaşık 111.32 kilometredir.
+            double mesafeDerece = mesafeKm / 111.32;
 
-            // Gelen yeni verileri mevcut tesisin üzerine yazıyoruz
-            mevcutTesis.TesisAdi = guncelTesis.TesisAdi;
-            mevcutTesis.TesisTuru = guncelTesis.TesisTuru;
-            mevcutTesis.KuruluGuc = guncelTesis.KuruluGuc;
-            mevcutTesis.Il = guncelTesis.Il;
-            mevcutTesis.Enlem = guncelTesis.Enlem;
-            mevcutTesis.Boylam = guncelTesis.Boylam;
+            // Kullanıcının haritadan tıkladığı merkez noktayı oluşturuyoruz
+            var merkezNokta = new NetTopologySuite.Geometries.Point(boylam, enlem) { SRID = 4326 };
 
-            _context.SaveChanges();
+            // POSTGIS SİHRİ: IsWithinDistance fonksiyonu arka planda ST_DWithin SQL komutuna dönüşür!
+            var yakindakiTesisler = _context.Tesisler
+                .Where(t => t.Konum.IsWithinDistance(merkezNokta, mesafeDerece))
+                .ToList();
 
-            return Ok(new { mesaj = "Tesis başarıyla güncellendi." });
+            // Bulunan tesisleri güvenli DTO paketimize çevirip ön yüze yolluyoruz
+            var tesisDtoListesi = _mapper.Map<List<TesisDTO>>(yakindakiTesisler);
+
+            return Ok(tesisDtoListesi);
         }
     }
 }

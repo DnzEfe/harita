@@ -18,8 +18,8 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "yeniTesis",
-        "Type": "turkiye_haritas\u0131.Models.Tesis",
+        "Name": "yeniTesisDTO",
+        "Type": "turkiye_haritas\u0131.DTOs.TesisDTO",
         "IsRequired": true
       }
     ],
@@ -43,21 +43,26 @@
   },
   {
     "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
-    "Method": "TesisGuncelle",
-    "RelativePath": "api/Tesis/{id}",
-    "HttpMethod": "PUT",
+    "Method": "YakindakiTesisleriGetir",
+    "RelativePath": "api/Tesis/analiz/yakindakiler",
+    "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [
       {
-        "Name": "id",
-        "Type": "System.Int32",
-        "IsRequired": true
+        "Name": "enlem",
+        "Type": "System.Double",
+        "IsRequired": false
       },
       {
-        "Name": "guncelTesis",
-        "Type": "turkiye_haritas\u0131.Models.Tesis",
-        "IsRequired": true
+        "Name": "boylam",
+        "Type": "System.Double",
+        "IsRequired": false
+      },
+      {
+        "Name": "mesafeKm",
+        "Type": "System.Double",
+        "IsRequired": false
       }
     ],
     "ReturnTypes": []

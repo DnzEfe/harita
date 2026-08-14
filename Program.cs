@@ -3,12 +3,20 @@ using turkiye_haritası; // AppDbContext dosyanın bulunduğu namespace
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- POSTGRESQL SERVİS KAYDI ---
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-// --------------------------------
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        x => x.UseNetTopologySuite() // YENİ: GIS (Coğrafi) yeteneğini açıyoruz
+    )
+);
 
 builder.Services.AddControllersWithViews();
+
+// AutoMapper'ı sisteme tanıtıyoruz
+builder.Services.AddAutoMapper(config =>
+{
+    config.AddProfile<turkiye_haritası.Mappings.TesisProfile>();
+});
 
 var app = builder.Build();
 
