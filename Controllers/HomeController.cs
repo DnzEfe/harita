@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Point = NetTopologySuite.Geometries.Point;
 using System;
 using System.Diagnostics;
@@ -186,8 +187,35 @@ namespace turkiye_haritası.Controllers
 
             return Json(illerListesi);
         }
-            // ... (mevcut kod aynen kalıyor, hiç dokunma)
-        
+
+        // 6. YENİ: Belirli bir nokta ve yarıçap (km) içindeki tesisleri
+        //    PostGIS ST_DWithin ile bulan Endpoint.
+        //    ::geography cast'i sayesinde yarıçap gerçek metre/km cinsinden hesaplanır
+        //    (geometry ile yapılırsa SRID 4326'da derece cinsinden yanlış sonuç çıkar).
+        [HttpGet]
+        public IActionResult YakinTesisler(double lat, double lon, double radiusKm = 50)
+        {
+            // Sunucu tarafında da bir sınır koyuyoruz: 1 km - 300 km arası.
+            if (radiusKm < 1) radiusKm = 1;
+            if (radiusKm > 300) radiusKm = 300;
+
+            double radiusMetre = radiusKm * 1000.0;
+
+            var sql = @"
+                SELECT * FROM tesisler
+                WHERE ST_DWithin(
+                    konum::geography,
+                    ST_SetSRID(ST_MakePoint({0}, {1}), 4326)::geography,
+                    {2}
+                )";
+
+            var sonuc = _context.Tesisler
+                .FromSqlRaw(sql, lon, lat, radiusMetre)
+                .AsNoTracking()
+                .ToList();
+
+            return Json(sonuc);
+        }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()

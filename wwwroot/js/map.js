@@ -3,6 +3,7 @@
     "esri/views/SceneView",
     "esri/Graphic",
     "esri/geometry/Point",
+    "esri/geometry/Circle",
     "esri/layers/GraphicsLayer",
     "esri/layers/GeoJSONLayer",
     "esri/layers/FeatureLayer",
@@ -11,7 +12,7 @@
     "esri/widgets/LayerList",
     "esri/widgets/Expand",
     "esri/widgets/Search"
-], function (Map, SceneView, Graphic, Point, GraphicsLayer, GeoJSONLayer, FeatureLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
+], function (Map, SceneView, Graphic, Point, Circle, GraphicsLayer, GeoJSONLayer, FeatureLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
 
     let illerListesi = [];
     let editingTesisId = null; // Düzenleme modunu takip eder (null = Yeni Kayıt)
@@ -277,6 +278,11 @@
 
     const graphicsLayer = new GraphicsLayer({ title: "İşaretler" });
     map.add(graphicsLayer);
+
+    // ARAMA (YAKIN TESİS) KATMANI - YENİ
+    // Seçilen nokta ve o noktanın etrafındaki arama çemberini burada çiziyoruz.
+    const aramaGraphicsLayer = new GraphicsLayer({ title: "Arama Alanı" });
+    map.add(aramaGraphicsLayer);
 
     // ARAÇLAR (UI WIDGETS)
     const fullscreen = new Fullscreen({ view: view });
@@ -765,4 +771,238 @@
                 .catch(err => console.error("Kayıt hatası:", err));
         }
     });
+
+    // =====================================================================
+    // YAKIN TESİS ARAMA (YENİ)
+    // Kullanıcı haritada bir nokta seçer, açılan popup'tan yarıçapı (km)
+    // artırıp azaltabilir (varsayılan 50 km, sınır: 1-300 km). "Ara"
+    // dendiğinde /Home/YakinTesisler PostGIS sorgusuna gidilir; dönen
+    // tesisler haritada vurgulanır ve seçim alanı bir daire olarak çizilir.
+    // =====================================================================
+    let aramaModuAktif = false;      // nokta seçimi bekleniyor mu
+    let aramaMapClickHandle = null;
+    let aramaSonucVar = false;       // ekranda aktif bir arama sonucu var mı
+    let secilenAramaNoktasi = null;  // { lat, lon }
+    let aramaSonucPanel = null;
+
+    const aramaBtn = document.createElement("button");
+    aramaBtn.className = "fab-search-tesis";
+    aramaBtn.title = "Yakın Tesis Ara";
+    aramaBtn.innerHTML = '<span class="fab-search-tesis__icon" aria-hidden="true">⌖</span>';
+    document.body.appendChild(aramaBtn);
+
+    const aramaModalHtml = `
+        <div id="aramaModal" class="tesis-modal">
+            <div class="tesis-modal__card">
+                <h3 class="tesis-modal__title">Yakın Tesis Ara</h3>
+                <p style="color:#aaa; font-size:13px; margin-top:-8px;">
+                    Seçilen nokta: <span id="aramaKoordinatText">--</span>
+                </p>
+
+                <div class="form-field">
+                    <label class="form-label">Arama Yarıçapı (km)</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button type="button" id="aramaYaricapAzalt" class="btn btn-ghost" style="padding:6px 14px;">−</button>
+                        <input type="number" id="aramaYaricapInput" class="form-input" style="text-align:center;" value="50" min="1" max="300" step="5" />
+                        <button type="button" id="aramaYaricapArtir" class="btn btn-ghost" style="padding:6px 14px;">+</button>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="aramaIptalBtn" class="btn btn-ghost">İptal</button>
+                    <button type="button" id="aramaAraBtn" class="btn btn-primary">Ara</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", aramaModalHtml);
+
+    const aramaModal = document.getElementById("aramaModal");
+    const aramaYaricapInput = document.getElementById("aramaYaricapInput");
+
+    const ARAMA_YARICAP_MIN = 1;
+    const ARAMA_YARICAP_MAX = 300;
+    const ARAMA_YARICAP_ADIM = 5;
+
+    document.getElementById("aramaYaricapAzalt").addEventListener("click", () => {
+        let deger = parseInt(aramaYaricapInput.value, 10) || 50;
+        deger = Math.max(ARAMA_YARICAP_MIN, deger - ARAMA_YARICAP_ADIM);
+        aramaYaricapInput.value = deger;
+    });
+
+    document.getElementById("aramaYaricapArtir").addEventListener("click", () => {
+        let deger = parseInt(aramaYaricapInput.value, 10) || 50;
+        deger = Math.min(ARAMA_YARICAP_MAX, deger + ARAMA_YARICAP_ADIM);
+        aramaYaricapInput.value = deger;
+    });
+
+    document.getElementById("aramaIptalBtn").addEventListener("click", () => {
+        aramaModal.classList.remove("is-open");
+        secilenAramaNoktasi = null;
+    });
+
+    aramaBtn.addEventListener("click", () => {
+        // Aktif bir arama sonucu ekrandaysa, buton "temizle" görevi görür.
+        if (aramaSonucVar) {
+            aramaTemizle();
+            return;
+        }
+
+        aramaModuAktif = !aramaModuAktif;
+
+        if (aramaModuAktif) {
+            aramaBtn.classList.add("is-active");
+            aramaBtn.title = "İptal etmek için tekrar tıklayın";
+
+            aramaMapClickHandle = view.on("click", (evt) => {
+                evt.stopPropagation();
+
+                secilenAramaNoktasi = {
+                    lat: evt.mapPoint.latitude,
+                    lon: evt.mapPoint.longitude
+                };
+
+                document.getElementById("aramaKoordinatText").textContent =
+                    secilenAramaNoktasi.lat.toFixed(4) + ", " + secilenAramaNoktasi.lon.toFixed(4);
+                aramaYaricapInput.value = 50;
+
+                aramaModal.classList.add("is-open");
+
+                aramaModuAktif = false;
+                aramaBtn.classList.remove("is-active");
+                aramaBtn.title = "Yakın Tesis Ara";
+                if (aramaMapClickHandle) aramaMapClickHandle.remove();
+            });
+        } else {
+            aramaBtn.classList.remove("is-active");
+            aramaBtn.title = "Yakın Tesis Ara";
+            if (aramaMapClickHandle) aramaMapClickHandle.remove();
+        }
+    });
+
+    document.getElementById("aramaAraBtn").addEventListener("click", () => {
+        if (!secilenAramaNoktasi) return;
+
+        let radiusKm = parseInt(aramaYaricapInput.value, 10) || 50;
+        radiusKm = Math.min(ARAMA_YARICAP_MAX, Math.max(ARAMA_YARICAP_MIN, radiusKm));
+
+        fetch(`/Home/YakinTesisler?lat=${secilenAramaNoktasi.lat}&lon=${secilenAramaNoktasi.lon}&radiusKm=${radiusKm}`)
+            .then(res => res.json())
+            .then(sonucListesi => {
+                aramaCiziVeVurgula(secilenAramaNoktasi, radiusKm, sonucListesi);
+                aramaModal.classList.remove("is-open");
+            })
+            .catch(err => console.error("Yakın tesis arama hatası:", err));
+    });
+
+    function aramaCiziVeVurgula(nokta, radiusKm, sonucListesi) {
+        const merkez = new Point({
+            longitude: nokta.lon,
+            latitude: nokta.lat,
+            spatialReference: { wkid: 4326 }
+        });
+
+        // Seçilen yarıçapla jeodezik (gerçek km) bir daire çiziyoruz.
+        const daire = new Circle({
+            center: merkez,
+            radius: radiusKm,
+            radiusUnit: "kilometers",
+            geodesic: true
+        });
+
+        aramaGraphicsLayer.removeAll();
+        aramaGraphicsLayer.add(new Graphic({
+            geometry: daire,
+            symbol: {
+                type: "simple-fill",
+                color: [0, 188, 212, 0.10],
+                outline: { color: [0, 188, 212, 0.9], width: 2 }
+            }
+        }));
+        aramaGraphicsLayer.add(new Graphic({
+            geometry: merkez,
+            symbol: {
+                type: "simple-marker",
+                color: [0, 188, 212],
+                size: "9px",
+                outline: { color: "white", width: 1 }
+            }
+        }));
+
+        // Bulunan tesisleri mevcut tesis katmanında vurguluyoruz (id ile eşleştirerek).
+        const bulunanIdSeti = new Set(sonucListesi.map(t => t.id !== undefined ? t.id : t.Id));
+
+        tesislerGraphicsLayer.graphics.forEach(g => {
+            const attrId = g.attributes.id !== undefined ? g.attributes.id : g.attributes.Id;
+            const tur = g.attributes.tesisTuru || g.attributes.TesisTuru;
+            const iciAlanda = bulunanIdSeti.has(attrId);
+
+            g.symbol = {
+                type: "simple-marker",
+                color: tesisRengiGetir(tur),
+                size: iciAlanda ? "18px" : "10px",
+                outline: {
+                    color: iciAlanda ? [255, 255, 0] : [255, 255, 255],
+                    width: iciAlanda ? 3 : 1
+                }
+            };
+        });
+
+        view.goTo(daire.extent.expand(1.4));
+
+        aramaSonucVar = true;
+        aramaBtn.classList.add("is-active");
+        aramaBtn.title = "Aramayı temizlemek için tıklayın";
+
+        aramaSonucPanelGoster(sonucListesi.length, radiusKm);
+    }
+
+    function aramaSonucPanelGoster(adet, radiusKm) {
+        if (!aramaSonucPanel) {
+            aramaSonucPanel = document.createElement("div");
+            Object.assign(aramaSonucPanel.style, {
+                position: "fixed",
+                bottom: "24px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: "rgba(20,20,20,0.92)",
+                color: "#fff",
+                padding: "10px 18px",
+                borderRadius: "10px",
+                fontSize: "14px",
+                zIndex: 1000,
+                display: "flex",
+                alignItems: "center",
+                gap: "12px"
+            });
+            document.body.appendChild(aramaSonucPanel);
+        }
+
+        aramaSonucPanel.innerHTML = `
+            <span>${adet} tesis bulundu (${radiusKm} km yarıçap)</span>
+            <button type="button" id="aramaTemizleBtn" class="btn btn-ghost" style="padding:4px 12px;">Temizle</button>
+        `;
+        aramaSonucPanel.style.display = "flex";
+
+        document.getElementById("aramaTemizleBtn").addEventListener("click", aramaTemizle);
+    }
+
+    function aramaTemizle() {
+        aramaGraphicsLayer.removeAll();
+        aramaSonucVar = false;
+        secilenAramaNoktasi = null;
+        aramaBtn.classList.remove("is-active");
+        aramaBtn.title = "Yakın Tesis Ara";
+        if (aramaSonucPanel) aramaSonucPanel.style.display = "none";
+
+        tesislerGraphicsLayer.graphics.forEach(g => {
+            const tur = g.attributes.tesisTuru || g.attributes.TesisTuru;
+            g.symbol = {
+                type: "simple-marker",
+                color: tesisRengiGetir(tur),
+                size: "14px",
+                outline: { color: [255, 255, 255], width: 1.5 }
+            };
+        });
+    }
 });

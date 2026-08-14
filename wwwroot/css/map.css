@@ -557,3 +557,23 @@
     border-radius: var(--radius) !important;
     box-shadow: var(--shadow-lift) !important;
 }
+
+.fab-search-tesis {
+    position: fixed;
+    right: 24px;
+    bottom: 96px; /* + butonunun üstünde dursun */
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #0097a7;
+    color: #fff;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    z-index: 999;
+}
+
+    .fab-search-tesis.is-active {
+        background: #d32f2f;
+    }

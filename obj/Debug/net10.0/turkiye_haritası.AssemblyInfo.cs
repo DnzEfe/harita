@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("turkiye_haritası")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1b9ca2d48f0c476fdcf56f78e41b90bf70a7620d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c5776aee8f8aa2685587d33cd383a80928d15101")]
 [assembly: System.Reflection.AssemblyProductAttribute("turkiye_haritası")]
 [assembly: System.Reflection.AssemblyTitleAttribute("turkiye_haritası")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

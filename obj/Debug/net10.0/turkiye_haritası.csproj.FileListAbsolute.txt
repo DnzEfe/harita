@@ -291,10 +291,10 @@ C:\Users\USER\source\repos\harita\bin\Debug\net10.0\zh-Hans\Microsoft.CodeAnalys
 C:\Users\USER\source\repos\harita\bin\Debug\net10.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\Users\USER\source\repos\harita\obj\Debug\net10.0\turkiye_haritası.csproj.AssemblyReference.cache
 C:\Users\USER\source\repos\harita\obj\Debug\net10.0\turkiye_.B8771F37.Up2Date
-C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\kusa13wj5p-{0}-6520x8m10v-6520x8m10v.gz
-C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-hwysvwf03b-hwysvwf03b.gz
 C:\Users\USER\source\repos\harita\obj\Debug\net10.0\EFCoreNpgsqlNetTopologySuite.cs
 C:\Users\USER\source\repos\harita\bin\Debug\net10.0\NetTopologySuite.dll
 C:\Users\USER\source\repos\harita\bin\Debug\net10.0\NetTopologySuite.IO.PostGis.dll
 C:\Users\USER\source\repos\harita\bin\Debug\net10.0\Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite.dll
 C:\Users\USER\source\repos\harita\bin\Debug\net10.0\Npgsql.NetTopologySuite.dll
+C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-sb5zfjndxi-sb5zfjndxi.gz
+C:\Users\USER\source\repos\harita\obj\Debug\net10.0\compressed\kusa13wj5p-{0}-yev7lfwrud-yev7lfwrud.gz
