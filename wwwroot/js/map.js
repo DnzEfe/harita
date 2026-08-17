@@ -12,8 +12,9 @@
     "esri/widgets/LayerList",
     "esri/widgets/Expand",
     "esri/widgets/Search",
-    "esri/widgets/Sketch/SketchViewModel"
-], function (Map, SceneView, Graphic, Point, Circle, GraphicsLayer, GeoJSONLayer, FeatureLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search, SketchViewModel) {
+    "esri/widgets/Sketch/SketchViewModel",
+    "esri/geometry/support/webMercatorUtils"
+], function (Map, SceneView, Graphic, Point, Circle, GraphicsLayer, GeoJSONLayer, FeatureLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search, SketchViewModel, webMercatorUtils) {
 
     let illerListesi = [];
     let editingTesisId = null; // Düzenleme modunu takip eder (null = Yeni Kayıt)
@@ -1126,7 +1127,17 @@
     function polygonSorgulaVeGoster(polygonGeometry) {
         sketchGraphicsLayer.removeAll();
 
-        const ring = polygonGeometry.rings[0];
+        // ÖNEMLİ: polygonGeometry.rings, haritanın kendi koordinat sistemine
+        // (genelde Web Mercator - metre cinsinden) göre gelir. Bunu doğrudan
+        // enlem/boylam derecesi gibi göndermek yanlış (ve haritadaki alandan
+        // çok uzak) bir polygon oluşturur; sunucuya göndermeden önce mutlaka
+        // coğrafi (WGS84, derece) sisteme çeviriyoruz.
+        let geoPolygon = polygonGeometry;
+        if (polygonGeometry.spatialReference && !polygonGeometry.spatialReference.isWGS84) {
+            geoPolygon = webMercatorUtils.webMercatorToGeographic(polygonGeometry);
+        }
+
+        const ring = geoPolygon.rings[0];
         if (!ring || ring.length < 3) return;
 
         const noktalar = ring.map(coord => ({ lat: coord[1], lon: coord[0] }));
