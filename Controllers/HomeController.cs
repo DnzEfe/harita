@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Point = NetTopologySuite.Geometries.Point;
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using turkiye_haritası.Data;
 using turkiye_haritası.Models;
@@ -188,8 +189,8 @@ namespace turkiye_haritası.Controllers
             return Json(illerListesi);
         }
 
-        // 6. YENİ: Belirli bir nokta ve yarıçap (km) içindeki tesisleri
-        //    PostGIS ST_DWithin ile bulan Endpoint.
+        // 6. Belirli bir nokta ve yarıçap (km) içindeki tesisleri
+        //    PostGIS ST_DWithin ile bulan Endpoint (değişmedi).
         //    ::geography cast'i sayesinde yarıçap gerçek metre/km cinsinden hesaplanır
         //    (geometry ile yapılırsa SRID 4326'da derece cinsinden yanlış sonuç çıkar).
         [HttpGet]
@@ -211,6 +212,52 @@ namespace turkiye_haritası.Controllers
 
             var sonuc = _context.Tesisler
                 .FromSqlRaw(sql, lon, lat, radiusMetre)
+                .AsNoTracking()
+                .ToList();
+
+            return Json(sonuc);
+        }
+
+        // 7. YENİ: Kullanıcının haritada çizdiği polygonun içindeki tesisleri
+        //    PostGIS ST_Contains ile bulan Endpoint.
+        //    Noktalar frontend'den (lat, lon) çiftleri olarak POST body'de gelir,
+        //    burada bir WKT POLYGON string'ine çevrilip PostGIS'e gönderilir.
+        [HttpPost]
+        public IActionResult TesislerPolygonIcinde([FromBody] PolygonSorguDto girdi)
+        {
+            if (girdi == null || girdi.Noktalar == null || girdi.Noktalar.Count < 3)
+            {
+                return BadRequest("Geçerli bir alan için en az 3 nokta gerekli.");
+            }
+
+            var noktalar = girdi.Noktalar.ToList();
+
+            // PostGIS WKT polygon kuralı: halka kapalı olmalı (ilk nokta = son nokta).
+            // Frontend zaten kapalı bir halka gönderiyor ama garanti olsun diye kontrol ediyoruz.
+            var ilk = noktalar[0];
+            var son = noktalar[^1];
+            if (ilk.Lat != son.Lat || ilk.Lon != son.Lon)
+            {
+                noktalar.Add(ilk);
+            }
+
+            // Ondalık ayıracı sunucu kültüründen (ör. tr-TR'de virgül) etkilenmesin diye
+            // InvariantCulture ile "." kullanarak WKT string'i oluşturuyoruz.
+            var wktNoktalar = string.Join(", ", noktalar.Select(n =>
+                n.Lon.ToString(CultureInfo.InvariantCulture) + " " +
+                n.Lat.ToString(CultureInfo.InvariantCulture)));
+
+            var polygonWkt = $"POLYGON(({wktNoktalar}))";
+
+            var sql = @"
+                SELECT * FROM tesisler
+                WHERE ST_Contains(
+                    ST_SetSRID(ST_GeomFromText({0}), 4326),
+                    konum
+                )";
+
+            var sonuc = _context.Tesisler
+                .FromSqlRaw(sql, polygonWkt)
                 .AsNoTracking()
                 .ToList();
 

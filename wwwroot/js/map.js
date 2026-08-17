@@ -11,8 +11,9 @@
     "esri/widgets/BasemapGallery",
     "esri/widgets/LayerList",
     "esri/widgets/Expand",
-    "esri/widgets/Search"
-], function (Map, SceneView, Graphic, Point, Circle, GraphicsLayer, GeoJSONLayer, FeatureLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search) {
+    "esri/widgets/Search",
+    "esri/widgets/Sketch/SketchViewModel"
+], function (Map, SceneView, Graphic, Point, Circle, GraphicsLayer, GeoJSONLayer, FeatureLayer, Fullscreen, BasemapGallery, LayerList, Expand, Search, SketchViewModel) {
 
     let illerListesi = [];
     let editingTesisId = null; // Düzenleme modunu takip eder (null = Yeni Kayıt)
@@ -279,8 +280,8 @@
     const graphicsLayer = new GraphicsLayer({ title: "İşaretler" });
     map.add(graphicsLayer);
 
-    // ARAMA (YAKIN TESİS) KATMANI - YENİ
-    // Seçilen nokta ve o noktanın etrafındaki arama çemberini burada çiziyoruz.
+    // ARAMA (YAKIN TESİS / POLYGON) KATMANI
+    // Seçilen nokta+yarıçap dairesini ya da çizilen polygonu burada çiziyoruz.
     const aramaGraphicsLayer = new GraphicsLayer({ title: "Arama Alanı" });
     map.add(aramaGraphicsLayer);
 
@@ -511,6 +512,37 @@
                 }
             })
             .catch(err => console.error("Tesisler çekilirken hata:", err));
+    }
+
+    // YAKIN TESİS ARAMA ve POLYGON ARAMA ortak marker güncelleme yardımcıları
+    function tesisSembolleriGuncelle(bulunanIdSeti) {
+        tesislerGraphicsLayer.graphics.forEach(g => {
+            const attrId = g.attributes.id !== undefined ? g.attributes.id : g.attributes.Id;
+            const tur = g.attributes.tesisTuru || g.attributes.TesisTuru;
+            const iciAlanda = bulunanIdSeti.has(attrId);
+
+            g.symbol = {
+                type: "simple-marker",
+                color: tesisRengiGetir(tur),
+                size: iciAlanda ? "18px" : "10px",
+                outline: {
+                    color: iciAlanda ? [255, 255, 0] : [255, 255, 255],
+                    width: iciAlanda ? 3 : 1
+                }
+            };
+        });
+    }
+
+    function tesisSembolleriSifirla() {
+        tesislerGraphicsLayer.graphics.forEach(g => {
+            const tur = g.attributes.tesisTuru || g.attributes.TesisTuru;
+            g.symbol = {
+                type: "simple-marker",
+                color: tesisRengiGetir(tur),
+                size: "14px",
+                outline: { color: [255, 255, 255], width: 1.5 }
+            };
+        });
     }
 
     // KÜRESEL DÜZENLEME VE SİLME FONKSİYONLARI (WINDOW BINDING)
@@ -773,7 +805,7 @@
     });
 
     // =====================================================================
-    // YAKIN TESİS ARAMA (YENİ)
+    // YAKIN TESİS ARAMA (nokta + yarıçap)
     // Kullanıcı haritada bir nokta seçer, açılan popup'tan yarıçapı (km)
     // artırıp azaltabilir (varsayılan 50 km, sınır: 1-300 km). "Ara"
     // dendiğinde /Home/YakinTesisler PostGIS sorgusuna gidilir; dönen
@@ -781,9 +813,12 @@
     // =====================================================================
     let aramaModuAktif = false;      // nokta seçimi bekleniyor mu
     let aramaMapClickHandle = null;
-    let aramaSonucVar = false;       // ekranda aktif bir arama sonucu var mı
+    let aramaSonucVar = false;       // ekranda aktif bir yarıçap arama sonucu var mı
     let secilenAramaNoktasi = null;  // { lat, lon }
-    let aramaSonucPanel = null;
+
+    // Yarıçap ve polygon aramaları ortak sonuç paneli / durum takibi
+    let sonucPanel = null;
+    let sonAramaTipi = null;         // 'yaricap' | 'polygon' | null
 
     const aramaBtn = document.createElement("button");
     aramaBtn.className = "fab-search-tesis";
@@ -842,10 +877,15 @@
     });
 
     aramaBtn.addEventListener("click", () => {
-        // Aktif bir arama sonucu ekrandaysa, buton "temizle" görevi görür.
+        // Ekranda aktif bir arama sonucu varsa, buton "temizle" görevi görür.
         if (aramaSonucVar) {
             aramaTemizle();
             return;
+        }
+
+        // Polygon araması aktifse önce onu temizleyelim (aynı anda tek arama).
+        if (sonAramaTipi === "polygon") {
+            polygonTemizle();
         }
 
         aramaModuAktif = !aramaModuAktif;
@@ -931,22 +971,7 @@
 
         // Bulunan tesisleri mevcut tesis katmanında vurguluyoruz (id ile eşleştirerek).
         const bulunanIdSeti = new Set(sonucListesi.map(t => t.id !== undefined ? t.id : t.Id));
-
-        tesislerGraphicsLayer.graphics.forEach(g => {
-            const attrId = g.attributes.id !== undefined ? g.attributes.id : g.attributes.Id;
-            const tur = g.attributes.tesisTuru || g.attributes.TesisTuru;
-            const iciAlanda = bulunanIdSeti.has(attrId);
-
-            g.symbol = {
-                type: "simple-marker",
-                color: tesisRengiGetir(tur),
-                size: iciAlanda ? "18px" : "10px",
-                outline: {
-                    color: iciAlanda ? [255, 255, 0] : [255, 255, 255],
-                    width: iciAlanda ? 3 : 1
-                }
-            };
-        });
+        tesisSembolleriGuncelle(bulunanIdSeti);
 
         // Bulunan tesislerin grafiklerini topluyoruz; bunları ArcGIS popup'ında
         // (mevcut tesisPopupTemplate ile, ok tuşlarıyla gezinilebilir) gösteriyoruz.
@@ -973,14 +998,29 @@
         aramaSonucVar = true;
         aramaBtn.classList.add("is-active");
         aramaBtn.title = "Aramayı temizlemek için tıklayın";
+        sonAramaTipi = "yaricap";
 
-        aramaSonucPanelGoster(sonucListesi.length, radiusKm);
+        sonucPanelGoster(`${sonucListesi.length} tesis bulundu (${radiusKm} km yarıçap)`);
     }
 
-    function aramaSonucPanelGoster(adet, radiusKm) {
-        if (!aramaSonucPanel) {
-            aramaSonucPanel = document.createElement("div");
-            Object.assign(aramaSonucPanel.style, {
+    function aramaTemizle() {
+        aramaGraphicsLayer.removeAll();
+        view.popup.close();
+        aramaSonucVar = false;
+        secilenAramaNoktasi = null;
+        aramaBtn.classList.remove("is-active");
+        aramaBtn.title = "Yakın Tesis Ara";
+        if (sonAramaTipi === "yaricap") sonAramaTipi = null;
+        if (sonucPanel) sonucPanel.style.display = "none";
+
+        tesisSembolleriSifirla();
+    }
+
+    // Yarıçap ve polygon aramaları için ortak sonuç paneli (ekran altı, ortalı)
+    function sonucPanelGoster(mesaj) {
+        if (!sonucPanel) {
+            sonucPanel = document.createElement("div");
+            Object.assign(sonucPanel.style, {
                 position: "fixed",
                 bottom: "24px",
                 left: "50%",
@@ -995,35 +1035,166 @@
                 alignItems: "center",
                 gap: "12px"
             });
-            document.body.appendChild(aramaSonucPanel);
+            document.body.appendChild(sonucPanel);
         }
 
-        aramaSonucPanel.innerHTML = `
-            <span>${adet} tesis bulundu (${radiusKm} km yarıçap)</span>
-            <button type="button" id="aramaTemizleBtn" class="btn btn-ghost" style="padding:4px 12px;">Temizle</button>
+        sonucPanel.innerHTML = `
+            <span>${mesaj}</span>
+            <button type="button" id="sonucTemizleBtn" class="btn btn-ghost" style="padding:4px 12px;">Temizle</button>
         `;
-        aramaSonucPanel.style.display = "flex";
+        sonucPanel.style.display = "flex";
 
-        document.getElementById("aramaTemizleBtn").addEventListener("click", aramaTemizle);
+        document.getElementById("sonucTemizleBtn").addEventListener("click", () => {
+            if (sonAramaTipi === "yaricap") aramaTemizle();
+            else if (sonAramaTipi === "polygon") polygonTemizle();
+        });
     }
 
-    function aramaTemizle() {
+    // =====================================================================
+    // POLYGON İÇİNDEKİ TESİS ARAMA (YENİ)
+    // Kullanıcı haritada serbest bir alan (polygon) çizer (ArcGIS
+    // SketchViewModel ile: köşe köşe tıklayıp çift tık ile bitirir, Esc
+    // ile iptal eder). Çizim tamamlanınca /Home/TesislerPolygonIcinde
+    // PostGIS sorgusuna gidilir; dönen tesisler haritada vurgulanır,
+    // çizilen alan haritada gösterilir ve bulunan tesis sayısı ekranda
+    // (yarıçap araması ile aynı) sonuç panelinde gösterilir.
+    // =====================================================================
+    let polygonModuAktif = false;   // çizim bekleniyor mu
+    let polygonSonucVar = false;    // ekranda aktif bir polygon sonucu var mı
+
+    // Sketch aracının çizim sırasında geçici olarak kullandığı katman.
+    // Kullanıcıya görünmesine gerek olmadığı için katman listesinden gizliyoruz.
+    const sketchGraphicsLayer = new GraphicsLayer({ title: "Çizim (Geçici)", listMode: "hide" });
+    map.add(sketchGraphicsLayer);
+
+    const sketchViewModel = new SketchViewModel({
+        view: view,
+        layer: sketchGraphicsLayer,
+        polygonSymbol: {
+            type: "simple-fill",
+            color: [156, 39, 176, 0.15],
+            outline: { color: [156, 39, 176, 0.9], width: 2 }
+        }
+    });
+
+    const polygonBtn = document.createElement("button");
+    polygonBtn.className = "fab-draw-polygon";
+    polygonBtn.title = "Alan Çizerek Tesis Ara";
+    polygonBtn.innerHTML = '<span class="fab-draw-polygon__icon" aria-hidden="true">⬠</span>';
+    document.body.appendChild(polygonBtn);
+
+    polygonBtn.addEventListener("click", () => {
+        // Ekranda aktif bir polygon sonucu varsa, buton "temizle" görevi görür.
+        if (polygonSonucVar) {
+            polygonTemizle();
+            return;
+        }
+
+        // Çizim zaten devam ediyorsa tekrar tıklanınca iptal eder.
+        if (polygonModuAktif) {
+            sketchViewModel.cancel();
+            polygonCizimBitir();
+            return;
+        }
+
+        // Yarıçap araması aktifse önce onu temizleyelim (aynı anda tek arama).
+        if (sonAramaTipi === "yaricap") {
+            aramaTemizle();
+        }
+
+        polygonModuAktif = true;
+        polygonBtn.classList.add("is-active");
+        polygonBtn.title = "İptal etmek için tekrar tıklayın (çizimi bitirmek için çift tıklayın)";
+        sketchViewModel.create("polygon");
+    });
+
+    function polygonCizimBitir() {
+        polygonModuAktif = false;
+        polygonBtn.classList.remove("is-active");
+        polygonBtn.title = "Alan Çizerek Tesis Ara";
+    }
+
+    sketchViewModel.on("create", (event) => {
+        if (event.state === "complete") {
+            polygonCizimBitir();
+            polygonSorgulaVeGoster(event.graphic.geometry);
+        } else if (event.state === "cancel") {
+            polygonCizimBitir();
+        }
+    });
+
+    function polygonSorgulaVeGoster(polygonGeometry) {
+        sketchGraphicsLayer.removeAll();
+
+        const ring = polygonGeometry.rings[0];
+        if (!ring || ring.length < 3) return;
+
+        const noktalar = ring.map(coord => ({ lat: coord[1], lon: coord[0] }));
+
+        fetch("/Home/TesislerPolygonIcinde", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ noktalar: noktalar })
+        })
+            .then(res => {
+                if (!res.ok) throw new Error("Polygon arama isteği başarısız oldu.");
+                return res.json();
+            })
+            .then(sonucListesi => {
+                aramaGraphicsLayer.removeAll();
+                aramaGraphicsLayer.add(new Graphic({
+                    geometry: polygonGeometry,
+                    symbol: {
+                        type: "simple-fill",
+                        color: [156, 39, 176, 0.12],
+                        outline: { color: [156, 39, 176, 0.9], width: 2.2 }
+                    }
+                }));
+
+                const bulunanIdSeti = new Set(sonucListesi.map(t => t.id !== undefined ? t.id : t.Id));
+                tesisSembolleriGuncelle(bulunanIdSeti);
+
+                const bulunanGraphics = tesislerGraphicsLayer.graphics.filter(g => {
+                    const attrId = g.attributes.id !== undefined ? g.attributes.id : g.attributes.Id;
+                    return bulunanIdSeti.has(attrId);
+                }).toArray();
+
+                if (bulunanGraphics.length > 0) {
+                    view.popup.open({
+                        features: bulunanGraphics,
+                        location: polygonGeometry.extent.center
+                    });
+                } else {
+                    view.popup.open({
+                        title: "Sonuç Yok",
+                        content: "Bu alanda kayıtlı tesis bulunamadı.",
+                        location: polygonGeometry.extent.center
+                    });
+                }
+
+                view.goTo(polygonGeometry.extent.expand(1.4));
+
+                polygonSonucVar = true;
+                polygonBtn.classList.add("is-active");
+                polygonBtn.title = "Aramayı temizlemek için tıklayın";
+                sonAramaTipi = "polygon";
+
+                sonucPanelGoster(`${sonucListesi.length} tesis bulundu (çizilen alan)`);
+            })
+            .catch(err => {
+                console.error("Polygon arama hatası:", err);
+            });
+    }
+
+    function polygonTemizle() {
         aramaGraphicsLayer.removeAll();
         view.popup.close();
-        aramaSonucVar = false;
-        secilenAramaNoktasi = null;
-        aramaBtn.classList.remove("is-active");
-        aramaBtn.title = "Yakın Tesis Ara";
-        if (aramaSonucPanel) aramaSonucPanel.style.display = "none";
+        polygonSonucVar = false;
+        polygonBtn.classList.remove("is-active");
+        polygonBtn.title = "Alan Çizerek Tesis Ara";
+        if (sonAramaTipi === "polygon") sonAramaTipi = null;
+        if (sonucPanel) sonucPanel.style.display = "none";
 
-        tesislerGraphicsLayer.graphics.forEach(g => {
-            const tur = g.attributes.tesisTuru || g.attributes.TesisTuru;
-            g.symbol = {
-                type: "simple-marker",
-                color: tesisRengiGetir(tur),
-                size: "14px",
-                outline: { color: [255, 255, 255], width: 1.5 }
-            };
-        });
+        tesisSembolleriSifirla();
     }
 });

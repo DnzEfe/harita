@@ -577,3 +577,29 @@
     .fab-search-tesis.is-active {
         background: #d32f2f;
     }
+
+/* YENİ: Polygon çizerek tesis arama butonu - arama butonunun üstünde dursun */
+.fab-draw-polygon {
+    position: fixed;
+    right: 24px;
+    bottom: 168px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #9c27b0;
+    color: #fff;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    z-index: 999;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+    .fab-draw-polygon:hover {
+        transform: translateY(-1px);
+    }
+
+    .fab-draw-polygon.is-active {
+        background: #d32f2f;
+    }
