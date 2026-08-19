@@ -99,7 +99,6 @@ C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\turkiye_haritası.sourcelink.json
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\compressed\kusa13wj5p-{0}-zlas7gnpu8-zlas7gnpu8.gz
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\compressed\s5vqa7jkds-{0}-jd7c8od4ll-jd7c8od4ll.gz
-C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\compressed\sf4q4b39y3-{0}-14mqwjib3s-14mqwjib3s.gz
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\bin\Debug\net10.0\wwwroot\js\iller.json
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\bin\Debug\net10.0\wwwroot\js\iller.json.gz
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\turkiye_haritası.csproj.AssemblyReference.cache
@@ -203,4 +202,5 @@ C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\bin\Debug\net10.0
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\bin\Debug\net10.0\Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite.dll
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\bin\Debug\net10.0\Npgsql.NetTopologySuite.dll
 C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\EFCoreNpgsqlNetTopologySuite.cs
-C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-z1obqrrnxu-z1obqrrnxu.gz
+C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\compressed\sf4q4b39y3-{0}-jd7c8od4ll-jd7c8od4ll.gz
+C:\Users\User\source\repos\Esri-Map-Project-\turkiye_haritası\obj\Debug\net10.0\compressed\fsdi0losvn-{0}-6idhgqhaiu-6idhgqhaiu.gz

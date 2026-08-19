@@ -1,8 +1,34 @@
 [
   {
+    "ContainingType": "ParselController",
+    "Method": "GetParseller",
+    "RelativePath": "api/Parsel",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "ParselController",
+    "Method": "GetParselIcindekiler",
+    "RelativePath": "api/Parsel/{id}/tesisler",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
-    "Method": "TesisleriGetir",
-    "RelativePath": "api/Tesis",
+    "Method": "GetTesisler",
+    "RelativePath": "api/tesis",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -12,13 +38,34 @@
   {
     "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
     "Method": "TesisEkle",
-    "RelativePath": "api/Tesis",
+    "RelativePath": "api/tesis",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [
       {
-        "Name": "yeniTesisDTO",
+        "Name": "tesisDto",
+        "Type": "turkiye_haritas\u0131.DTOs.TesisDTO",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
+    "Method": "TesisGuncelle",
+    "RelativePath": "api/tesis/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "tesisDto",
         "Type": "turkiye_haritas\u0131.DTOs.TesisDTO",
         "IsRequired": true
       }
@@ -28,7 +75,7 @@
   {
     "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
     "Method": "TesisSil",
-    "RelativePath": "api/Tesis/{id}",
+    "RelativePath": "api/tesis/{id}",
     "HttpMethod": "DELETE",
     "IsController": true,
     "Order": 0,
@@ -43,8 +90,24 @@
   },
   {
     "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
-    "Method": "YakindakiTesisleriGetir",
-    "RelativePath": "api/Tesis/analiz/yakindakiler",
+    "Method": "PolygonIcindekiTesisleriGetir",
+    "RelativePath": "api/tesis/analiz/polygon",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "koseler",
+        "Type": "System.Collections.Generic.List\u00601[[turkiye_haritas\u0131.Controllers.KoordinatSorguDTO, turkiye_haritas\u0131, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
+    "Method": "YakindakileriGetir",
+    "RelativePath": "api/tesis/analiz/yakindakiler",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,

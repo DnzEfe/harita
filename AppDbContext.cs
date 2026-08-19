@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using ProjeninAdAlaniniYaz;
 using turkiye_haritası.Models; // Models klasörünün namespace'i
 
 namespace turkiye_haritası
@@ -10,6 +11,8 @@ namespace turkiye_haritası
         }
 
         // PostgreSQL tarafında "Tesisler" adında bir tablo oluşturacak
-        public DbSet<Tesis> Tesisler { get; set; }
+        public DbSet<Tesis>Tesisler { get; set; }
+
+        public DbSet<Parsel> Parseller { get; set; }
     }
 }
