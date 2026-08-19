@@ -10,6 +10,7 @@ namespace turkiye_haritası.Data
         }
 
         public DbSet<Tesis> Tesisler { get; set; }
+        public DbSet<Parsel> Parseller { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -21,6 +22,14 @@ namespace turkiye_haritası.Data
 
                 entity.Property(t => t.Konum)
                       .HasColumnType("geometry (point, 4326)");
+            });
+
+            modelBuilder.Entity<Parsel>(entity =>
+            {
+                entity.ToTable("parseller");
+
+                entity.Property(p => p.Geom)
+                      .HasColumnType("geometry (geometry, 4326)");
             });
         }
     }
