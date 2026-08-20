@@ -67,4 +67,36 @@ public class ParselController : ControllerBase
 
         return Ok(icindekiTesisler);
     }
+
+    [HttpGet("sorgula")]
+    public async Task<IActionResult> Sorgula(int ada, int parsel)
+    {
+        // 1. Veriyi PostGIS'ten ham geometriyle çekiyoruz
+        var dbKayıt = await _context.Parseller
+            .Where(p => p.AdaNo == ada && p.ParselNo == parsel)
+            .Select(p => new {
+                p.Id,
+                p.AdaNo,
+                p.ParselNo,
+                p.Il,
+                p.Ilce,
+                p.Konum
+            })
+            .FirstOrDefaultAsync();
+
+        if (dbKayıt == null) return NotFound("Bu ada ve parsele ait kayıt bulunamadı.");
+
+        // 2. ArcGIS'in anlayacağı koordinat dizisine C# (RAM) üzerinde çeviriyoruz
+        var sonuc = new
+        {
+            dbKayıt.Id,
+            dbKayıt.AdaNo,
+            dbKayıt.ParselNo,
+            dbKayıt.Il,
+            dbKayıt.Ilce,
+            Koordinatlar = dbKayıt.Konum.Coordinates.Select(c => new double[] { c.X, c.Y }).ToArray()
+        };
+
+        return Ok(sonuc);
+    }
 }

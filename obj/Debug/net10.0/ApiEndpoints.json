@@ -26,6 +26,27 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "ParselController",
+    "Method": "Sorgula",
+    "RelativePath": "api/Parsel/sorgula",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "ada",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "parsel",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "turkiye_haritas\u0131.Controllers.TesisController",
     "Method": "GetTesisler",
     "RelativePath": "api/tesis",
