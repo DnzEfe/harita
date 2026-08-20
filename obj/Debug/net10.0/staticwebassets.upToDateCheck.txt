@@ -1,7 +1,6 @@
 wwwroot\css\map.css
 wwwroot\css\site.css
 wwwroot\favicon.ico
-wwwroot\js\map.js
 wwwroot\js\site.js
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css.map
@@ -63,6 +62,7 @@ wwwroot\lib\jquery\dist\jquery.slim.js
 wwwroot\lib\jquery\dist\jquery.slim.min.js
 wwwroot\lib\jquery\dist\jquery.slim.min.map
 wwwroot\lib\jquery\LICENSE.txt
+wwwroot\js\map.js
 C:\Users\USER\source\repos\harita\wwwroot\css\map.css
 C:\Users\USER\source\repos\harita\wwwroot\css\site.css
 C:\Users\USER\source\repos\harita\wwwroot\favicon.ico

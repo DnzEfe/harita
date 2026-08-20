@@ -486,6 +486,107 @@
             mevcutTesisleriYukle();
         });
 
+
+    // ADA/PARSEL SORGULAMA PANELİ
+    let parsellerLayerView = null;
+    let aktifParselHighlight = null;
+
+    view.whenLayerView(parsellerLayer).then(function (layerView) {
+        parsellerLayerView = layerView;
+    });
+
+    function sqlDeger(deger) {
+        // Sayısal ise tırnaksız, metinse tırnaklı yazar (ada_no/parsel_no kolon tipinden bağımsız çalışsın diye)
+        if (deger !== "" && !isNaN(deger)) return deger;
+        return `'${deger.replace(/'/g, "''")}'`;
+    }
+
+    const parselSorguPanel = document.createElement("div");
+    parselSorguPanel.className = "il-panel";
+    parselSorguPanel.style.minWidth = "220px";
+    parselSorguPanel.innerHTML = `
+        <div class="il-panel__header">Ada/Parsel Sorgula</div>
+        <div style="padding: 10px;">
+            <div class="form-field">
+                <label class="form-label" for="parselSorguIl">İl (opsiyonel)</label>
+                <input type="text" id="parselSorguIl" class="form-input" placeholder="Örn: Ankara" />
+            </div>
+            <div class="form-field">
+                <label class="form-label" for="parselSorguIlce">İlçe (opsiyonel)</label>
+                <input type="text" id="parselSorguIlce" class="form-input" placeholder="Örn: Çankaya" />
+            </div>
+            <div class="form-field">
+                <label class="form-label" for="parselSorguAda">Ada No</label>
+                <input type="text" id="parselSorguAda" class="form-input" placeholder="Örn: 1234" />
+            </div>
+            <div class="form-field">
+                <label class="form-label" for="parselSorguParsel">Parsel No</label>
+                <input type="text" id="parselSorguParsel" class="form-input" placeholder="Örn: 5" />
+            </div>
+            <button type="button" id="parselSorguBtn" class="btn btn-primary" style="width:100%; margin-top:6px;">Sorgula</button>
+        </div>
+    `;
+
+    const parselSorguExpand = new Expand({
+        view: view,
+        content: parselSorguPanel,
+        expandIconClass: "esri-icon-search",
+        expandTooltip: "Ada/Parsel Sorgula",
+        group: "top-left"
+    });
+    view.ui.add(parselSorguExpand, "top-left");
+
+    parselSorguPanel.querySelector("#parselSorguBtn").addEventListener("click", () => {
+        const il = document.getElementById("parselSorguIl").value.trim();
+        const ilce = document.getElementById("parselSorguIlce").value.trim();
+        const ada = document.getElementById("parselSorguAda").value.trim();
+        const parselNo = document.getElementById("parselSorguParsel").value.trim();
+
+        if (!ada || !parselNo) {
+            alert("Lütfen ada ve parsel numarasını giriniz.");
+            return;
+        }
+
+        let where = `ada_no = ${sqlDeger(ada)} AND parsel_no = ${sqlDeger(parselNo)}`;
+        if (il) where += ` AND il = ${sqlDeger(il)}`;
+        if (ilce) where += ` AND ilce = ${sqlDeger(ilce)}`;
+
+        const queryTarget = parsellerLayerView || parsellerLayer;
+        const query = queryTarget.createQuery();
+        query.where = where;
+        query.returnGeometry = true;
+        query.outFields = ["*"];
+
+        queryTarget.queryFeatures(query).then(result => {
+            if (!result.features || result.features.length === 0) {
+                alert("Bu ada/parsel numarasına ait kayıt bulunamadı.");
+                return;
+            }
+
+            const feature = result.features[0];
+            feature.layer = parsellerLayer;
+            feature.popupTemplate = parselPopupTemplate;
+
+            if (aktifParselHighlight) { aktifParselHighlight.remove(); aktifParselHighlight = null; }
+            if (parsellerLayerView) aktifParselHighlight = parsellerLayerView.highlight(feature);
+
+            if (parselSorguExpand.expanded) parselSorguExpand.collapse();
+
+            const targetGeometry = feature.geometry.extent || feature.geometry;
+            const locationPoint = feature.geometry.extent ? feature.geometry.extent.center : feature.geometry;
+
+            view.goTo({ target: targetGeometry, tilt: 45 }, { duration: 1000 }).then(() => {
+                view.popup.open({
+                    features: [feature],
+                    location: locationPoint
+                });
+            });
+        }).catch(err => {
+            console.error("Ada/Parsel sorgu hatası:", err);
+            alert("Sorgu sırasında bir hata oluştu.");
+        });
+    });
+
     const searchWidget = new Search({ view: view });
     view.ui.add(searchWidget, "top-right");
 
